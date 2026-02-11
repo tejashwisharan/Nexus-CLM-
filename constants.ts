@@ -281,6 +281,41 @@ const generateOffboardingCases = (count: number): EntityProfile[] => {
     return offboardingProfiles;
 }
 
+// Force add ~50 specific Rejected cases
+const generateRejectedCases = (count: number): EntityProfile[] => {
+    const rejectedProfiles: EntityProfile[] = [];
+    for(let i=0; i<count; i++) {
+        const base = generateMocks(1)[0];
+        base.id = `REJ-${4000+i}`;
+        base.status = ApplicationStatus.REJECTED;
+        
+        // Rejected usually means high risk or failed checks
+        const isHighRisk = Math.random() > 0.3;
+        base.riskLevel = isHighRisk ? RiskLevel.HIGH : RiskLevel.MEDIUM;
+        base.riskScore = isHighRisk ? 85 + Math.floor(Math.random() * 10) : 60 + Math.floor(Math.random() * 20);
+
+        if (isHighRisk) {
+             base.riskFactors = [
+                 { category: 'Screening', description: 'Confirmed Adverse Media regarding fraud', score: 90, severity: RiskLevel.HIGH },
+                 { category: 'Jurisdiction', description: 'Operations in sanctioned jurisdiction', score: 95, severity: RiskLevel.HIGH }
+             ];
+             base.screeningResult = {
+                 adverseMediaFound: true,
+                 pepStatus: false,
+                 sanctionsHit: Math.random() > 0.7,
+                 summary: 'Critical screening hits found.'
+             };
+        } else {
+             // Policy rejection
+             base.waiverReason = "Unable to provide ultimate beneficial owner details for >25% stakeholders.";
+             base.riskFactors.push({ category: 'Policy', description: 'Incomplete KYC Documentation', score: 60, severity: RiskLevel.MEDIUM });
+        }
+        
+        rejectedProfiles.push(base);
+    }
+    return rejectedProfiles;
+}
+
 // --- Manual Scenarios ---
 const MANUAL_MOCKS: EntityProfile[] = [
   {
@@ -388,7 +423,8 @@ const MANUAL_MOCKS: EntityProfile[] = [
 export const MOCK_DATABASE: EntityProfile[] = [
     ...MANUAL_MOCKS,
     ...generatePKYCCases(25), 
-    ...generateOffboardingCases(50), // Generate 50 offboarding cases
+    ...generateOffboardingCases(50), 
+    ...generateRejectedCases(50),
     ...generateMocks(150)
 ];
 

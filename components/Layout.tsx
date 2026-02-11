@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus, CheckCircle, Ban } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,12 +11,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'onboarding', label: 'Onboarding', icon: UserPlus },
-    { id: 'ai-log', label: 'AI Agent Log', icon: Bot },
+    { id: 'active-clients', label: 'Active Clients', icon: CheckCircle },
     { id: 'peer-review', label: 'Peer Review', icon: UserCheck },
     { id: 'pkyc', label: 'PKYC / Monitoring', icon: RefreshCw },
-    { id: 'offboarding', label: 'Off-boarding', icon: UserMinus }, // New Tab
+    { id: 'offboarding', label: 'Off-boarding', icon: UserMinus }, 
     { id: 'queue', label: 'EDD Queue', icon: ListChecks }, 
     { id: 'waivers', label: 'Waiver Assessment', icon: Flag },
+    { id: 'rejected', label: 'Rejected', icon: Ban },
     { id: 'search', label: 'Entity Search', icon: Search },
   ];
 

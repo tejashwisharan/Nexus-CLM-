@@ -213,10 +213,8 @@ const ReviewQueue: React.FC<ReviewQueueProps> = ({ items, onReview }) => {
 
                             <button
                                 onClick={() => {
-                                    if(confirm('Are you sure you want to reject this entity?')) {
-                                        onReview(selectedEntity.id, 'reject');
-                                        setSelectedEntityId(null);
-                                    }
+                                    onReview(selectedEntity.id, 'reject');
+                                    setSelectedEntityId(null);
                                 }}
                                 className="w-full flex items-center justify-center space-x-2 py-3 border border-red-200 text-red-600 bg-white rounded-lg hover:bg-red-50 font-medium transition-all"
                             >

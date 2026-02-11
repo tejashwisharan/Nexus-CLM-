@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { EntityProfile, ApplicationStatus, RiskLevel } from '../types';
-import { ShieldAlert, Flag, CheckCircle, RefreshCw, UserMinus, FileText, Activity, Layers, UserCheck } from 'lucide-react';
+import { ShieldAlert, Flag, CheckCircle, RefreshCw, UserMinus, FileText, Activity, Layers, UserCheck, Ban } from 'lucide-react';
 
 interface WorkflowDiagramProps {
   database: EntityProfile[];
@@ -83,6 +83,15 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
       statusMatch: [ApplicationStatus.WAIVER_REQUESTED]
     },
     {
+      id: 'rejected',
+      label: 'Rejected',
+      count: getCount([ApplicationStatus.REJECTED]),
+      x: 50, y: 85,
+      icon: <Ban className="w-4 h-4" />,
+      description: 'Declined Applications',
+      statusMatch: [ApplicationStatus.REJECTED]
+    },
+    {
       id: 'peer',
       label: 'Peer Review',
       count: getCount([ApplicationStatus.PEER_REVIEW]),
@@ -125,6 +134,11 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
     // Returns to main flow
     { from: 'edd', to: 'peer', type: 'step-right-down' },
     { from: 'waiver', to: 'peer', type: 'step-right-up' },
+
+    // Rejections
+    { from: 'edd', to: 'rejected', type: 'diagonal-long' },
+    { from: 'waiver', to: 'rejected', type: 'straight' }, // Waiver is at 65,85. Rejected at 50,85. 
+    { from: 'peer', to: 'rejected', type: 'diagonal-peer-reject' },
     
     // End stages
     { from: 'peer', to: 'approved', type: 'straight' },
@@ -157,8 +171,12 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
 
     switch (conn.type) {
         case 'straight':
-            // Connect Right edge to Left edge
-            d = `M ${sx + halfW} ${sy} L ${ex - halfW} ${ey}`;
+            // Connect Right edge to Left edge, or Left to Right if reversed
+            if (sx < ex) {
+                d = `M ${sx + halfW} ${sy} L ${ex - halfW} ${ey}`;
+            } else {
+                d = `M ${sx - halfW} ${sy} L ${ex + halfW} ${ey}`;
+            }
             break;
         case 'straight-down':
              // Connect Bottom edge to Top edge
@@ -179,7 +197,6 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
         case 'step-right-down':
             // EDD (Top) -> Peer (Middle)
             // Right from Right edge, then Down to Top edge of Peer? 
-            // Or Bottom of EDD -> Top of Peer. 
             // Let's go Right from EDD then Down.
             d = `M ${sx + halfW} ${sy} L ${ex} ${sy} L ${ex} ${ey - halfH}`;
             break;
@@ -194,21 +211,34 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
             const topLoopY = 20; 
             d = `M ${sx} ${sy - halfH} L ${sx} ${topLoopY} L ${ex} ${topLoopY} L ${ex} ${ey - halfH}`;
             break;
+        case 'diagonal-long':
+             // EDD (65, 25) -> Rejected (50, 85)
+             // Left from EDD, Down to Rejected
+             d = `M ${sx - halfW} ${sy} L ${ex} ${sy} L ${ex} ${ey - halfH}`;
+             break;
+        case 'diagonal-peer-reject':
+            // Peer (80, 55) -> Rejected (50, 85)
+            // Bottom of Peer -> Right of Rejected? No.
+            // Bottom of Peer -> Down -> Left -> Rejected Right
+            const peerDrop = sy + 80;
+            d = `M ${sx} ${sy + halfH} L ${sx} ${peerDrop} L ${ex + halfW} ${peerDrop} L ${ex + halfW} ${ey}`;
+            break;
         default:
             d = `M ${sx} ${sy} L ${ex} ${ey}`;
     }
 
     const isLoop = conn.type === 'loop-top';
+    const isReject = conn.to === 'rejected';
 
     return (
       <g key={`${conn.from}-${conn.to}`}>
         <path 
             d={d} 
             fill="none" 
-            stroke={isLoop ? "#cbd5e1" : "#94a3b8"} 
+            stroke={isLoop ? "#cbd5e1" : (isReject ? "#fca5a5" : "#94a3b8")} 
             strokeWidth={isLoop ? "1.5" : "2"} 
             strokeDasharray={isLoop ? "6,6" : "0"}
-            markerEnd="url(#arrowhead)"
+            markerEnd={isReject ? "url(#arrowhead-red)" : "url(#arrowhead)"}
             className="transition-all duration-500"
         />
       </g>
@@ -233,6 +263,9 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
           <defs>
             <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
               <path d="M 0 0 L 6 3 L 0 6 L 1 3 Z" fill="#94a3b8" />
+            </marker>
+            <marker id="arrowhead-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M 0 0 L 6 3 L 0 6 L 1 3 Z" fill="#fca5a5" />
             </marker>
           </defs>
           {connections.map(renderPath)}

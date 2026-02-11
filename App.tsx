@@ -5,14 +5,15 @@ import ReviewQueue from './views/ReviewQueue';
 import PeerReview from './views/PeerReview';
 import WaiverQueue from './views/WaiverQueue';
 import EntitySearch from './views/EntitySearch';
-import AIOnboardedQueue from './views/AIOnboardedQueue';
+import ActiveClientsQueue from './views/ActiveClientsQueue';
 import PKYCQueue from './views/PKYCQueue';
 import OffboardingQueue from './views/OffboardingQueue';
+import RejectedQueue from './views/RejectedQueue';
 import WorkflowDiagram from './components/WorkflowDiagram';
 import { MOCK_DATABASE } from './constants';
 import { EntityProfile, ApplicationStatus, RiskLevel } from './types';
 import RiskBadge from './components/RiskBadge';
-import { Users, AlertTriangle, CheckCircle, PieChart, Flag, Bot, RefreshCw, UserMinus } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, PieChart, Flag, Bot, RefreshCw, UserMinus, Ban } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,7 +24,7 @@ const App: React.FC = () => {
     
     // Redirect logic updated based on status
     if (entity.status === ApplicationStatus.APPROVED && entity.approvedBy === 'AI') {
-        setActiveTab('ai-log'); // Redirect to AI Log
+        setActiveTab('active-clients'); // Redirect to Active Clients
     } else if (entity.riskLevel === RiskLevel.HIGH) {
       setActiveTab('queue'); // To EDD
     } else {
@@ -37,10 +38,14 @@ const App: React.FC = () => {
         if (action === 'waiver') {
             return { ...item, status: ApplicationStatus.WAIVER_REQUESTED, waiverReason: reason };
         }
+        if (action === 'reject') {
+            return { ...item, status: ApplicationStatus.REJECTED, approvedBy: undefined };
+        }
+        // Approve
         return {
           ...item,
-          status: action === 'approve' ? ApplicationStatus.APPROVED : ApplicationStatus.REJECTED,
-          approvedBy: action === 'approve' ? 'Analyst' : undefined
+          status: ApplicationStatus.APPROVED,
+          approvedBy: 'Analyst'
         };
       }
       return item;
@@ -109,6 +114,7 @@ const App: React.FC = () => {
       pkyc: database.filter(e => e.status === ApplicationStatus.PERIODIC_REVIEW).length,
       offboarding: database.filter(e => e.status === ApplicationStatus.OFFBOARDING_REQUESTED).length,
       approved: database.filter(e => e.status === ApplicationStatus.APPROVED).length,
+      rejected: database.filter(e => e.status === ApplicationStatus.REJECTED).length,
       aiApproved: database.filter(e => e.status === ApplicationStatus.APPROVED && e.approvedBy === 'AI').length
     };
 
@@ -198,11 +204,11 @@ const App: React.FC = () => {
            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-500 text-[10px] font-bold uppercase">Total Approved</p>
-                <h3 className="text-xl font-bold text-slate-800 mt-1">{stats.approved}</h3>
+                <p className="text-slate-500 text-[10px] font-bold uppercase">Rejected</p>
+                <h3 className="text-xl font-bold text-slate-800 mt-1">{stats.rejected}</h3>
               </div>
-              <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
-                <CheckCircle className="w-4 h-4" />
+              <div className="p-1.5 bg-red-50 text-red-600 rounded-lg">
+                <Ban className="w-4 h-4" />
               </div>
             </div>
           </div>
@@ -218,12 +224,13 @@ const App: React.FC = () => {
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
       {activeTab === 'dashboard' && renderDashboard()}
       {activeTab === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} />}
-      {activeTab === 'ai-log' && <AIOnboardedQueue items={database} />}
+      {activeTab === 'active-clients' && <ActiveClientsQueue items={database} />}
       {activeTab === 'pkyc' && <PKYCQueue items={database} onReview={handlePKYCReview} />}
       {activeTab === 'offboarding' && <OffboardingQueue items={database} onConfirm={handleOffboardingConfirm} />}
       {activeTab === 'queue' && <ReviewQueue items={database} onReview={handleEDDReview} />}
       {activeTab === 'peer-review' && <PeerReview items={database} onReview={handlePeerReview} />}
       {activeTab === 'waivers' && <WaiverQueue items={database} onDecision={handleWaiverDecision} />}
+      {activeTab === 'rejected' && <RejectedQueue items={database} />}
       {activeTab === 'search' && <EntitySearch database={database} />}
     </Layout>
   );

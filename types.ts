@@ -1,3 +1,4 @@
+
 export enum EntityType {
   INDIVIDUAL = 'Individual',
   COMPANY = 'Company',
@@ -31,6 +32,8 @@ export interface DocumentRequirement {
   name: string;
   description: string;
   uploaded: boolean;
+  triggerReason?: string; // Why is this document required?
+  category?: 'Standard' | 'Risk' | 'Product' | 'Jurisdiction'; // For grouping in UI
 }
 
 export interface RiskFactor {

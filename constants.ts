@@ -1,4 +1,5 @@
-import { EntityType, EntityProfile, RiskLevel, ApplicationStatus } from './types';
+
+import { EntityType, EntityProfile, RiskLevel, ApplicationStatus, DocumentRequirement } from './types';
 
 export const COUNTRIES = [
   "United States", "United Kingdom", "Canada", "Australia", "Germany", "France", "Japan", "Singapore", 
@@ -44,6 +45,8 @@ export const FINANCIAL_PRODUCTS = [
   "Custody Services"
 ];
 
+// --- POLICY RULES ---
+
 export const REQUIRED_DOCS_MAP: Record<string, { name: string; desc: string }[]> = {
   [EntityType.INDIVIDUAL]: [
     { name: 'Proof of Identity', desc: 'Passport or National ID Card' },
@@ -76,13 +79,48 @@ export const REQUIRED_DOCS_MAP: Record<string, { name: string; desc: string }[]>
   ]
 };
 
-// Additional industry specific rules based on NACE codes or keywords
+// Documents triggered by Industry/NACE selection
 export const INDUSTRY_DOCS: Record<string, { name: string; desc: string }[]> = {
   'B - Mining and Quarrying': [{ name: 'Environmental Impact Assessment', desc: 'Approved EIA report' }],
   'K - Financial and Insurance Activities': [{ name: 'Regulatory License', desc: 'Banking or investment license' }],
   'O - Public Administration and Defence': [{ name: 'Trade License', desc: 'Arms export control license' }],
   'F - Construction': [{ name: 'Site Permits', desc: 'Major project permits' }]
 };
+
+// Documents triggered by specific Products
+export const PRODUCT_DOCS: Record<string, { name: string; desc: string }[]> = {
+  "Trade Finance / Letter of Credit": [
+      { name: "Trade License / Import-Export Code", desc: "Proof of authorization for cross-border trade" }
+  ],
+  "Investment / Wealth Management": [
+      { name: "Sophisticated Investor Declaration", desc: "Proof of net worth or investment experience" },
+      { name: "Source of Wealth Declaration", desc: "Detailed breakdown of wealth accumulation" }
+  ],
+  "Merchant Services / Payment Processing": [
+      { name: "PCI DSS Compliance Certificate", desc: "Data security standard certification" },
+      { name: "Website Ownership Proof", desc: "Domain registration documents" }
+  ]
+};
+
+// Documents triggered by Keyword Matching in "Business Activity" or "Occupation"
+export const KEYWORD_DOCS: Record<string, { name: string; desc: string; reason: string }[]> = {
+    "shipping": [{ name: "Bill of Lading Sample", desc: "Sample shipping document", reason: "Maritime Sector Policy" }, { name: "Vessel Registry", desc: "List of owned/chartered vessels", reason: "Maritime Sector Policy" }],
+    "marine": [{ name: "Maritime Insurance", desc: "Coverage for marine operations", reason: "Maritime Sector Policy" }],
+    "crypto": [{ name: "VASP Registration", desc: "Virtual Asset Service Provider license", reason: "Crypto/Digital Asset Policy" }, { name: "AML Policy", desc: "Internal AML control framework", reason: "Crypto/Digital Asset Policy" }],
+    "blockchain": [{ name: "VASP Registration", desc: "Virtual Asset Service Provider license", reason: "Crypto/Digital Asset Policy" }],
+    "gambling": [{ name: "Gaming License", desc: "Jurisdictional gaming authority license", reason: "High Risk Sector: Gambling" }],
+    "casino": [{ name: "Gaming License", desc: "Jurisdictional gaming authority license", reason: "High Risk Sector: Gambling" }],
+    "arms": [{ name: "Arms Dealer License", desc: "Government authorization", reason: "High Risk Sector: Defense" }],
+    "defense": [{ name: "Arms Dealer License", desc: "Government authorization", reason: "High Risk Sector: Defense" }],
+    "charity": [{ name: "Donor List > $5k", desc: "Transparency for major donors", reason: "NGO/Charity Sector Policy" }]
+};
+
+// High Risk Jurisdictions
+export const RISK_JURISDICTIONS = ["Panama", "Russia", "Iran", "Colombia", "UAE"];
+export const JURISDICTION_DOCS = [
+    { name: "Enhanced Due Diligence Form", desc: "Supplemental jurisdiction questionnaire" },
+    { name: "Local Counsel Opinion", desc: "Legal verification of entity status" }
+];
 
 const WAIVER_REASONS = [
     "Client unable to provide utility bill under 3 months old due to temporary accommodation; Lease agreement provided.",
@@ -193,11 +231,13 @@ const generateMocks = (count: number): EntityProfile[] => {
 
         // Random Documents
         const docsList = REQUIRED_DOCS_MAP[type] || [];
-        const docs = docsList.map(d => ({
+        const docs: DocumentRequirement[] = docsList.map(d => ({
             id: `doc-${i}-${d.name.replace(/\s/g, '')}`,
             name: d.name,
             description: d.desc,
-            uploaded: true
+            uploaded: true,
+            triggerReason: 'Standard Policy',
+            category: 'Standard'
         }));
 
         // Random Factors
@@ -331,8 +371,8 @@ const MANUAL_MOCKS: EntityProfile[] = [
       email: 'contact@techflow.com'
     },
     documents: [
-       { id: 'd1', name: 'Certificate of Incorporation', description: 'Official government registration', uploaded: true },
-       { id: 'd2', name: 'Financial Statements', description: 'Latest Audited Accounts', uploaded: true }
+       { id: 'd1', name: 'Certificate of Incorporation', description: 'Official government registration', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
+       { id: 'd2', name: 'Financial Statements', description: 'Latest Audited Accounts', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
     ],
     riskScore: 10,
     riskLevel: RiskLevel.LOW,
@@ -360,8 +400,8 @@ const MANUAL_MOCKS: EntityProfile[] = [
       email: 's.morales@example.com'
     },
     documents: [
-       { id: 'd1', name: 'Passport', description: 'Colombian Passport', uploaded: true },
-       { id: 'd2', name: 'Proof of Address', description: 'Utility Bill Miami', uploaded: true }
+       { id: 'd1', name: 'Passport', description: 'Colombian Passport', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
+       { id: 'd2', name: 'Proof of Address', description: 'Utility Bill Miami', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
     ],
     riskScore: 75,
     riskLevel: RiskLevel.HIGH,
@@ -384,7 +424,7 @@ const MANUAL_MOCKS: EntityProfile[] = [
       product: 'Savings Account'
     },
     documents: [
-        { id: 'd1', name: 'Registration Certificate', description: 'NGO Registry proof', uploaded: true }
+        { id: 'd1', name: 'Registration Certificate', description: 'NGO Registry proof', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
     ],
     riskScore: 25,
     riskLevel: RiskLevel.LOW,
@@ -405,8 +445,8 @@ const MANUAL_MOCKS: EntityProfile[] = [
         product: 'Trade Finance / Letter of Credit'
       },
       documents: [
-          { id: 'd1', name: 'Certificate of Incorporation', description: 'Panama Registry', uploaded: true },
-          { id: 'd2', name: 'Board Resolution', description: 'Missing signature', uploaded: true }
+          { id: 'd1', name: 'Certificate of Incorporation', description: 'Panama Registry', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
+          { id: 'd2', name: 'Board Resolution', description: 'Missing signature', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
       ],
       riskScore: 60,
       riskLevel: RiskLevel.MEDIUM,

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Onboarding from './views/Onboarding';
@@ -78,15 +79,21 @@ const App: React.FC = () => {
       }));
   };
 
-  const handlePKYCReview = (id: string, action: 'confirm' | 'escalate') => {
+  const handlePKYCReview = (id: string, action: 'confirm' | 'retrigger' | 'reject') => {
       setDatabase(prev => prev.map(item => {
           if (item.id === id) {
+              if (action === 'reject') {
+                  return { ...item, status: ApplicationStatus.REJECTED, approvedBy: undefined };
+              }
+              if (action === 'retrigger') {
+                  return { ...item, status: ApplicationStatus.REVIEW_REQUIRED, approvedBy: undefined }; // Send to EDD
+              }
+              // confirm
               return {
                   ...item,
-                  // If confirm -> Approved (Renewed), If escalate -> EDD Review
-                  status: action === 'confirm' ? ApplicationStatus.APPROVED : ApplicationStatus.REVIEW_REQUIRED,
-                  approvedBy: action === 'confirm' ? 'Analyst' : undefined,
-                  lastReviewDate: action === 'confirm' ? new Date().toISOString() : item.lastReviewDate
+                  status: ApplicationStatus.APPROVED,
+                  approvedBy: 'Analyst',
+                  lastReviewDate: new Date().toISOString()
               };
           }
           return item;

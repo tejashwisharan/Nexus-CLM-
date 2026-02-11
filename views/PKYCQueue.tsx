@@ -1,11 +1,12 @@
+
 import React, { useState } from 'react';
 import { EntityProfile, ApplicationStatus } from '../types';
 import RiskBadge from '../components/RiskBadge';
-import { RefreshCw, Search, ChevronRight, ChevronLeft, AlertCircle, Calendar, Activity, CheckCircle, User, Briefcase, FileText } from 'lucide-react';
+import { RefreshCw, Search, ChevronRight, ChevronLeft, AlertCircle, Calendar, Activity, CheckCircle, User, Briefcase, FileText, XCircle } from 'lucide-react';
 
 interface PKYCQueueProps {
   items: EntityProfile[];
-  onReview: (id: string, action: 'confirm' | 'escalate') => void;
+  onReview: (id: string, action: 'confirm' | 'retrigger' | 'reject') => void;
 }
 
 const PKYCQueue: React.FC<PKYCQueueProps> = ({ items, onReview }) => {
@@ -126,22 +127,25 @@ const PKYCQueue: React.FC<PKYCQueueProps> = ({ items, onReview }) => {
                            <div className="flex space-x-3 w-full md:w-auto">
                                 <button
                                     onClick={() => {
-                                        onReview(selectedEntity.id, 'escalate');
-                                        setSelectedEntityId(null);
+                                        if (confirm("Are you sure you want to reject this KYC? This will mark the entity as Rejected.")) {
+                                            onReview(selectedEntity.id, 'reject');
+                                            setSelectedEntityId(null);
+                                        }
                                     }}
-                                    className="flex-1 md:flex-none px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-800 hover:text-white font-medium transition-all text-sm"
+                                    className="flex-1 md:flex-none px-4 py-2 border border-red-500 text-red-400 rounded-lg hover:bg-red-900/30 hover:border-red-400 font-medium transition-all text-sm flex items-center justify-center"
                                 >
-                                    Flag for Enhanced Due Diligence (EDD)
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Reject KYC
                                 </button>
                                 <button
                                     onClick={() => {
-                                        onReview(selectedEntity.id, 'confirm');
+                                        onReview(selectedEntity.id, 'retrigger');
                                         setSelectedEntityId(null);
                                     }}
-                                    className="flex-1 md:flex-none px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold shadow-md transition-all text-sm flex items-center justify-center"
+                                    className="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition-all text-sm flex items-center justify-center"
                                 >
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Confirm & Renew
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Re-trigger KYC
                                 </button>
                            </div>
                       </div>

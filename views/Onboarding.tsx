@@ -18,6 +18,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [entityType, setEntityType] = useState<EntityType | ''>('');
   const [formData, setFormData] = useState<any>({});
   const [requiredDocs, setRequiredDocs] = useState<DocumentRequirement[]>([]);
+  const [uploadAttempts, setUploadAttempts] = useState<Record<string, number>>({});
   // activePolicies is calculated but not visually shown anymore
   const [activePolicies, setActivePolicies] = useState<{name: string, type: 'standard' | 'warning' | 'info'}[]>([]);
   
@@ -479,13 +480,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const allUploaded = requiredDocs.every(d => d.uploaded && d.verificationStatus === 'Verified');
 
     const handleUploadAndScan = async (id: string, name: string) => {
+        // Increment attempts
+        const currentAttempts = (uploadAttempts[id] || 0) + 1;
+        setUploadAttempts(prev => ({ ...prev, [id]: currentAttempts }));
+
         // 1. Set to scanning
         setRequiredDocs(prev => prev.map(d => d.id === id ? { ...d, uploaded: true, verificationStatus: 'Scanning' } : d));
         
         // 2. Simulate Delay for Forensic Analysis
         setTimeout(async () => {
             // 3. Call AI Service
-            const forensics = await verifyDocumentIntegrity(name);
+            // Logic: 1st success, 2nd fail, 3rd success
+            const shouldFail = currentAttempts === 2;
+            const forensics = await verifyDocumentIntegrity(name, shouldFail);
             
             // 4. Update Result
             setRequiredDocs(prev => prev.map(d => {

@@ -131,12 +131,15 @@ export const searchEntitiesNaturalLanguage = async (query: string, currentDataba
 };
 
 // 3. Document Forensic Analysis (Simulation)
-export const verifyDocumentIntegrity = async (docName: string): Promise<ForensicResult> => {
+export const verifyDocumentIntegrity = async (docName: string, shouldFail?: boolean): Promise<ForensicResult> => {
     // In a real app, we would send file buffers. Here we simulate the forensic check
     // using the model to generate realistic outcomes.
     
     // We intentionally introduce "Flagged" scenarios for demonstration if the docName contains "fake" or specific triggers.
-    const isSuspicious = docName.toLowerCase().includes("fake") || Math.random() > 0.9; // 10% chance of random flag for demo
+    // MODIFIED: Accepts shouldFail override.
+    const isSuspicious = shouldFail !== undefined 
+        ? shouldFail 
+        : (docName.toLowerCase().includes("fake") || Math.random() > 0.9);
 
     const prompt = `
         You are a Document Forensics AI.
@@ -186,11 +189,18 @@ export const verifyDocumentIntegrity = async (docName: string): Promise<Forensic
 
         return JSON.parse(response.text || "{}");
     } catch (e) {
-        return {
-            isForged: false,
-            score: 100,
-            factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' },
-            reason: "Forensic service passed (default)."
+        // Fallback
+        const defaultResult: ForensicResult = {
+            isForged: isSuspicious,
+            score: isSuspicious ? 35 : 98,
+            factors: {
+                metadata: isSuspicious ? 'Inconsistent' : 'Consistent',
+                ela: isSuspicious ? 'Fail' : 'Pass',
+                fonts: isSuspicious ? 'Manipulation Detected' : 'Consistent',
+                pixel: isSuspicious ? 'Artifacts Detected' : 'Natural'
+            },
+            reason: isSuspicious ? "System detected anomalies (fallback)." : "Forensic service passed (default)."
         };
+        return defaultResult;
     }
 };

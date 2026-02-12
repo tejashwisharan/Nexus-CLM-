@@ -27,6 +27,20 @@ export enum ApplicationStatus {
   OFFBOARDED = 'Off-boarded' // Closed
 }
 
+export type VerificationStatus = 'Pending' | 'Scanning' | 'Verified' | 'Flagged';
+
+export interface ForensicResult {
+  isForged: boolean;
+  score: number; // 0-100% confidence of authenticity
+  factors: {
+    metadata: 'Consistent' | 'Inconsistent' | 'Missing';
+    ela: 'Pass' | 'Fail' | 'Inconclusive'; // Error Level Analysis
+    fonts: 'Consistent' | 'Manipulation Detected';
+    pixel: 'Natural' | 'Artifacts Detected';
+  };
+  reason?: string;
+}
+
 export interface DocumentRequirement {
   id: string;
   name: string;
@@ -34,6 +48,8 @@ export interface DocumentRequirement {
   uploaded: boolean;
   triggerReason?: string; // Why is this document required?
   category?: 'Standard' | 'Risk' | 'Product' | 'Jurisdiction'; // For grouping in UI
+  verificationStatus?: VerificationStatus;
+  forensicAnalysis?: ForensicResult;
 }
 
 export interface RiskFactor {

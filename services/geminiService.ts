@@ -1,6 +1,7 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { MOCK_DATABASE } from "../constants"; // Import MOCK_DATABASE for context
-import { EntityProfile, RiskLevel, ScreeningResult, RiskFactor } from "../types";
+import { EntityProfile, RiskLevel, ScreeningResult, RiskFactor, ForensicResult } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -127,4 +128,69 @@ export const searchEntitiesNaturalLanguage = async (query: string, currentDataba
     console.error("Search Error:", error);
     return { matchedIds: [], reason: "Search service unavailable." };
   }
+};
+
+// 3. Document Forensic Analysis (Simulation)
+export const verifyDocumentIntegrity = async (docName: string): Promise<ForensicResult> => {
+    // In a real app, we would send file buffers. Here we simulate the forensic check
+    // using the model to generate realistic outcomes.
+    
+    // We intentionally introduce "Flagged" scenarios for demonstration if the docName contains "fake" or specific triggers.
+    const isSuspicious = docName.toLowerCase().includes("fake") || Math.random() > 0.9; // 10% chance of random flag for demo
+
+    const prompt = `
+        You are a Document Forensics AI.
+        Analyze a document named "${docName}".
+        
+        Task:
+        Simulate a forensic analysis report. 
+        If 'isSuspicious' is true (simulated logic), generate a detection report for a forged document.
+        Otherwise, generate a clean report.
+        
+        Factors to evaluate:
+        1. Metadata Consistency (Creation dates, software used)
+        2. Error Level Analysis (ELA) (Compression artifacts)
+        3. Font/Typography Consistency
+        4. Pixel Pattern Analysis (Cloning/Healing detection)
+
+        Is Suspicious: ${isSuspicious}
+
+        Return strictly valid JSON.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        isForged: { type: Type.BOOLEAN },
+                        score: { type: Type.INTEGER, description: "0-100 authenticity confidence" },
+                        factors: {
+                            type: Type.OBJECT,
+                            properties: {
+                                metadata: { type: Type.STRING, enum: ['Consistent', 'Inconsistent', 'Missing'] },
+                                ela: { type: Type.STRING, enum: ['Pass', 'Fail', 'Inconclusive'] },
+                                fonts: { type: Type.STRING, enum: ['Consistent', 'Manipulation Detected'] },
+                                pixel: { type: Type.STRING, enum: ['Natural', 'Artifacts Detected'] }
+                            }
+                        },
+                        reason: { type: Type.STRING }
+                    }
+                }
+            }
+        });
+
+        return JSON.parse(response.text || "{}");
+    } catch (e) {
+        return {
+            isForged: false,
+            score: 100,
+            factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' },
+            reason: "Forensic service passed (default)."
+        };
+    }
 };

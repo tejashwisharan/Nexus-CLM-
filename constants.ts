@@ -178,10 +178,29 @@ const generateMocks = (count: number): EntityProfile[] => {
         const isIndividual = type === EntityType.INDIVIDUAL;
         
         let name = "";
+        let details: any = {};
+        
         if (isIndividual) {
             name = `${names.first[Math.floor(Math.random() * names.first.length)]} ${names.last[Math.floor(Math.random() * names.last.length)]}`;
+            details = {
+                country: COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)],
+                occupation: industries[Math.floor(Math.random() * industries.length)],
+                product: FINANCIAL_PRODUCTS[Math.floor(Math.random() * FINANCIAL_PRODUCTS.length)],
+                email: `contact@${name.replace(/\s/g, '').toLowerCase()}.com`
+            };
         } else {
             name = `${names.companies[Math.floor(Math.random() * names.companies.length)]} ${names.suffix[Math.floor(Math.random() * names.suffix.length)]}`;
+            const chairmanFirstName = names.first[Math.floor(Math.random() * names.first.length)];
+            const chairmanLastName = names.last[Math.floor(Math.random() * names.last.length)];
+            
+            details = {
+                country: COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)],
+                industry: industries[Math.floor(Math.random() * industries.length)],
+                product: FINANCIAL_PRODUCTS[Math.floor(Math.random() * FINANCIAL_PRODUCTS.length)],
+                email: `info@${name.replace(/\s/g, '').toLowerCase()}.com`,
+                chairman: `${chairmanFirstName} ${chairmanLastName}`,
+                ubos: `${chairmanFirstName} ${chairmanLastName} (51%), Private Equity Partners (49%)`
+            };
         }
 
         // Determine Risk Profile & Status
@@ -237,7 +256,19 @@ const generateMocks = (count: number): EntityProfile[] => {
             description: d.desc,
             uploaded: true,
             triggerReason: 'Standard Policy',
-            category: 'Standard'
+            category: 'Standard',
+            verificationStatus: 'Verified',
+            forensicAnalysis: {
+                isForged: false,
+                score: 98,
+                factors: {
+                    metadata: 'Consistent',
+                    ela: 'Pass',
+                    fonts: 'Consistent',
+                    pixel: 'Natural'
+                },
+                reason: 'Document appears authentic.'
+            }
         }));
 
         // Random Factors
@@ -261,13 +292,7 @@ const generateMocks = (count: number): EntityProfile[] => {
             id: `ENT-${1000 + i}`,
             type,
             name,
-            details: {
-                country: COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)],
-                industry: !isIndividual ? industries[Math.floor(Math.random() * industries.length)] : undefined,
-                occupation: isIndividual ? industries[Math.floor(Math.random() * industries.length)] : undefined,
-                product: FINANCIAL_PRODUCTS[Math.floor(Math.random() * FINANCIAL_PRODUCTS.length)],
-                email: `contact@${name.replace(/\s/g, '').toLowerCase()}.com`
-            },
+            details,
             documents: docs,
             riskScore: score,
             riskLevel,
@@ -368,11 +393,13 @@ const MANUAL_MOCKS: EntityProfile[] = [
       country: 'United Kingdom',
       turnover: '5M',
       product: 'Business Checking Account',
-      email: 'contact@techflow.com'
+      email: 'contact@techflow.com',
+      chairman: 'Alexander Tech',
+      ubos: 'Alexander Tech (100%)'
     },
     documents: [
-       { id: 'd1', name: 'Certificate of Incorporation', description: 'Official government registration', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
-       { id: 'd2', name: 'Financial Statements', description: 'Latest Audited Accounts', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
+       { id: 'd1', name: 'Certificate of Incorporation', description: 'Official government registration', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } },
+       { id: 'd2', name: 'Financial Statements', description: 'Latest Audited Accounts', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } }
     ],
     riskScore: 10,
     riskLevel: RiskLevel.LOW,
@@ -400,8 +427,8 @@ const MANUAL_MOCKS: EntityProfile[] = [
       email: 's.morales@example.com'
     },
     documents: [
-       { id: 'd1', name: 'Passport', description: 'Colombian Passport', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
-       { id: 'd2', name: 'Proof of Address', description: 'Utility Bill Miami', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
+       { id: 'd1', name: 'Passport', description: 'Colombian Passport', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } },
+       { id: 'd2', name: 'Proof of Address', description: 'Utility Bill Miami', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } }
     ],
     riskScore: 75,
     riskLevel: RiskLevel.HIGH,
@@ -421,10 +448,12 @@ const MANUAL_MOCKS: EntityProfile[] = [
       focus: 'Environmental Protection',
       country: 'Germany',
       fundingSource: 'Public Donations',
-      product: 'Savings Account'
+      product: 'Savings Account',
+      chairman: 'Dr. Hilda Gärtner',
+      ubos: 'Publicly Funded Charity (No UBO)'
     },
     documents: [
-        { id: 'd1', name: 'Registration Certificate', description: 'NGO Registry proof', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
+        { id: 'd1', name: 'Registration Certificate', description: 'NGO Registry proof', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } }
     ],
     riskScore: 25,
     riskLevel: RiskLevel.LOW,
@@ -442,11 +471,13 @@ const MANUAL_MOCKS: EntityProfile[] = [
         industry: 'H - Transportation and Storage',
         country: 'Panama',
         turnover: '50M',
-        product: 'Trade Finance / Letter of Credit'
+        product: 'Trade Finance / Letter of Credit',
+        chairman: 'Carlos Mendez',
+        ubos: 'Carlos Mendez (30%), Anonymous Trust (70%)'
       },
       documents: [
-          { id: 'd1', name: 'Certificate of Incorporation', description: 'Panama Registry', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' },
-          { id: 'd2', name: 'Board Resolution', description: 'Missing signature', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard' }
+          { id: 'd1', name: 'Certificate of Incorporation', description: 'Panama Registry', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Verified', forensicAnalysis: { isForged: false, score: 99, factors: { metadata: 'Consistent', ela: 'Pass', fonts: 'Consistent', pixel: 'Natural' } } },
+          { id: 'd2', name: 'Board Resolution', description: 'Missing signature', uploaded: true, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Flagged', forensicAnalysis: { isForged: true, score: 35, factors: { metadata: 'Inconsistent', ela: 'Fail', fonts: 'Manipulation Detected', pixel: 'Artifacts Detected' }, reason: 'Digital signature insertion detected.' } }
       ],
       riskScore: 60,
       riskLevel: RiskLevel.MEDIUM,
@@ -532,7 +563,9 @@ export const DEMO_SCENARIOS = [
       country: 'United Kingdom',
       product: 'Business Checking Account',
       sourceOfFunds: 'Business Turnover',
-      volume: '100,000'
+      volume: '100,000',
+      chairman: 'Arthur Green',
+      ubos: 'Arthur Green (60%), Sarah Green (40%)'
     }
   },
   {
@@ -554,7 +587,9 @@ export const DEMO_SCENARIOS = [
       country: 'Iran',
       product: 'Trade Finance / Letter of Credit',
       sourceOfFunds: 'Government Contracts',
-      volume: '5,000,000'
+      volume: '5,000,000',
+      chairman: 'General Al-Sayed',
+      ubos: 'Ministry of Defense (51%), Private Consortium (49%)'
     }
   }
 ];

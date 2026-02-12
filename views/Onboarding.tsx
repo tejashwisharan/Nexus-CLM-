@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { EntityType, DocumentRequirement, RiskLevel, EntityProfile, ApplicationStatus } from '../types';
 import { REQUIRED_DOCS_MAP, INDUSTRY_DOCS, COUNTRIES, NACE_CODES, FINANCIAL_PRODUCTS, DEMO_SCENARIOS, KEYWORD_DOCS, RISK_JURISDICTIONS, PRODUCT_DOCS, JURISDICTION_DOCS } from '../constants';
-import { performRiskAnalysis } from '../services/geminiService';
+import { performRiskAnalysis, verifyDocumentIntegrity } from '../services/geminiService';
 import RiskBadge from '../components/RiskBadge';
-import { ArrowRight, Upload, AlertCircle, Loader2, FileCheck, Search, ChevronRight, Check, Briefcase, MapPin, Mail, Globe, Zap, Bot, Sparkles, Shield, Anchor, AlertTriangle, Scale, UserCheck } from 'lucide-react';
+import { ArrowRight, Upload, AlertCircle, Loader2, FileCheck, Search, ChevronRight, Check, Briefcase, MapPin, Mail, Globe, Zap, Bot, Sparkles, Shield, Anchor, AlertTriangle, Scale, UserCheck, Users, ScanEye, Microscope, FileWarning } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (entity: EntityProfile) => void;
@@ -33,14 +33,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     // 1. Base Requirements (Standard)
     const baseDocs = REQUIRED_DOCS_MAP[type] || [];
     baseDocs.forEach(d => {
-        docs.push({ id: `base-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: 'Standard Policy', category: 'Standard' });
+        docs.push({ id: `base-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: 'Standard Policy', category: 'Standard', verificationStatus: 'Pending' });
     });
     policies.push({ name: `Standard KYC: ${type}`, type: 'standard' });
 
     // 2. Industry Rules (NACE)
     if (data.industry && INDUSTRY_DOCS[data.industry]) {
         INDUSTRY_DOCS[data.industry].forEach(d => {
-             docs.push({ id: `ind-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `Industry: ${data.industry.substring(0, 15)}...`, category: 'Risk' });
+             docs.push({ id: `ind-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `Industry: ${data.industry.substring(0, 15)}...`, category: 'Risk', verificationStatus: 'Pending' });
         });
         policies.push({ name: 'Sector Specific Risk Policy', type: 'info' });
     }
@@ -48,7 +48,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     // 3. Product Rules
     if (data.product && PRODUCT_DOCS[data.product]) {
         PRODUCT_DOCS[data.product].forEach(d => {
-            docs.push({ id: `prod-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `Product: ${data.product}`, category: 'Product' });
+            docs.push({ id: `prod-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `Product: ${data.product}`, category: 'Product', verificationStatus: 'Pending' });
         });
         policies.push({ name: 'Financial Product Compliance', type: 'info' });
     }
@@ -57,7 +57,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const country = data.country || data.nationality;
     if (country && RISK_JURISDICTIONS.includes(country)) {
         JURISDICTION_DOCS.forEach(d => {
-             docs.push({ id: `jur-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `High Risk Jurisdiction: ${country}`, category: 'Jurisdiction' });
+             docs.push({ id: `jur-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: `High Risk Jurisdiction: ${country}`, category: 'Jurisdiction', verificationStatus: 'Pending' });
         });
         policies.push({ name: `Enhanced Due Diligence: ${country}`, type: 'warning' });
     }
@@ -71,7 +71,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             KEYWORD_DOCS[keyword].forEach(d => {
                 // Prevent duplicates if multiple keywords trigger same doc
                 if (!docs.find(existing => existing.name === d.name)) {
-                    docs.push({ id: `key-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: d.reason, category: 'Risk' });
+                    docs.push({ id: `key-${d.name}`, name: d.name, description: d.desc, uploaded: false, triggerReason: d.reason, category: 'Risk', verificationStatus: 'Pending' });
                 }
             });
             // Add a policy flag if not already added for this reason
@@ -86,7 +86,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         // Merge uploaded state if doc names match (preserve uploads when switching)
         return docs.map(newDoc => {
             const existing = prev.find(p => p.name === newDoc.name);
-            return existing ? { ...newDoc, uploaded: existing.uploaded } : newDoc;
+            return existing ? { ...newDoc, uploaded: existing.uploaded, verificationStatus: existing.verificationStatus, forensicAnalysis: existing.forensicAnalysis } : newDoc;
         });
     });
     setActivePolicies(policies);
@@ -177,7 +177,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // --- Step 2: Dynamic Extensive Form (Policy Engine runs in background) ---
   const renderStep2 = () => {
     const isIndividual = entityType === EntityType.INDIVIDUAL;
-    const canProceed = formData.name && formData.email && formData.product && (isIndividual ? formData.nationality : formData.industry);
+    const canProceed = formData.name && formData.email && formData.product && (isIndividual ? formData.nationality : (formData.industry && formData.chairman && formData.ubos));
 
     return (
       <div className="max-w-4xl mx-auto">
@@ -306,6 +306,38 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     )}
                 </div>
             </div>
+
+            {!isIndividual && (
+               <>
+                <div className="border-t border-slate-100 pt-6"></div>
+                <div>
+                   <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4 flex items-center">
+                     <Users className="w-4 h-4 mr-2" /> Management & Ownership
+                   </h4>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="col-span-2 md:col-span-1">
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Chairman / Key Director <span className="text-red-500">*</span></label>
+                         <input
+                            type="text"
+                            value={formData.chairman || ''}
+                            onChange={(e) => handleInputChange('chairman', e.target.value)}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+                            placeholder="Full Name"
+                         />
+                      </div>
+                      <div className="col-span-2">
+                         <label className="block text-sm font-medium text-slate-700 mb-1">UBOs & Stakeholders (&gt;25% Ownership) <span className="text-red-500">*</span></label>
+                         <textarea
+                            value={formData.ubos || ''}
+                            onChange={(e) => handleInputChange('ubos', e.target.value)}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-slate-900 h-24"
+                            placeholder="Please list all Ultimate Beneficial Owners and key stakeholders..."
+                         />
+                      </div>
+                   </div>
+                </div>
+               </>
+            )}
 
             <div className="border-t border-slate-100 pt-6"></div>
 
@@ -444,10 +476,33 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   // --- Step 3: Documentation Rules (Grouped by Category) ---
   const renderStep3 = () => {
-    const allUploaded = requiredDocs.every(d => d.uploaded);
+    const allUploaded = requiredDocs.every(d => d.uploaded && d.verificationStatus === 'Verified');
 
-    const toggleUpload = (id: string) => {
-      setRequiredDocs(prev => prev.map(d => d.id === id ? { ...d, uploaded: !d.uploaded } : d));
+    const handleUploadAndScan = async (id: string, name: string) => {
+        // 1. Set to scanning
+        setRequiredDocs(prev => prev.map(d => d.id === id ? { ...d, uploaded: true, verificationStatus: 'Scanning' } : d));
+        
+        // 2. Simulate Delay for Forensic Analysis
+        setTimeout(async () => {
+            // 3. Call AI Service
+            const forensics = await verifyDocumentIntegrity(name);
+            
+            // 4. Update Result
+            setRequiredDocs(prev => prev.map(d => {
+                if (d.id === id) {
+                    return {
+                        ...d,
+                        verificationStatus: forensics.isForged ? 'Flagged' : 'Verified',
+                        forensicAnalysis: forensics
+                    };
+                }
+                return d;
+            }));
+        }, 2000);
+    };
+
+    const removeDoc = (id: string) => {
+        setRequiredDocs(prev => prev.map(d => d.id === id ? { ...d, uploaded: false, verificationStatus: 'Pending', forensicAnalysis: undefined } : d));
     };
 
     const handleProceedToAnalysis = async () => {
@@ -469,8 +524,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
     return (
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-xl font-bold text-slate-800 mb-2">Required Documentation</h3>
-        <p className="text-slate-500 mb-6">Based on the inputs provided, the Policy Engine has generated the following requirement checklist.</p>
+        <h3 className="text-xl font-bold text-slate-800 mb-2">Required Documentation & Forensics</h3>
+        <p className="text-slate-500 mb-6">Upload documents. System will automatically scan for forgery, digital manipulation, and metadata inconsistencies.</p>
 
         <div className="space-y-8 mb-8">
           {Object.entries(groupedDocs).map(([category, docs]) => (
@@ -486,35 +541,100 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                        <FileCheck className="w-4 h-4 mr-2" />}
                       {category} Requirements
                   </h4>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {docs.map((doc) => (
-                        <div key={doc.id} className={`p-4 border rounded-lg flex items-center justify-between transition-all ${doc.uploaded ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
-                        <div className="flex items-start space-x-3">
-                            <div className={`mt-1 p-2 rounded-lg ${doc.uploaded ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                            <FileCheck className="w-5 h-5" />
+                        <div key={doc.id} className={`p-4 border rounded-xl transition-all ${
+                            doc.verificationStatus === 'Flagged' ? 'bg-red-50 border-red-200' :
+                            doc.verificationStatus === 'Verified' ? 'bg-emerald-50 border-emerald-200' : 
+                            'bg-white border-slate-200 hover:border-blue-300'
+                        }`}>
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-start space-x-3">
+                                    <div className={`mt-1 p-2 rounded-lg ${
+                                        doc.verificationStatus === 'Verified' ? 'bg-emerald-200 text-emerald-700' : 
+                                        doc.verificationStatus === 'Flagged' ? 'bg-red-200 text-red-700' :
+                                        'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        <FileCheck className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-slate-800">{doc.name}</h4>
+                                        <p className="text-sm text-slate-500">{doc.description}</p>
+                                        {doc.triggerReason && (
+                                            <span className="inline-block mt-1 text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                                Trigger: {doc.triggerReason}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    {doc.verificationStatus === 'Pending' && !doc.uploaded && (
+                                        <button 
+                                            onClick={() => handleUploadAndScan(doc.id, doc.name)}
+                                            className="flex items-center space-x-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 bg-white font-medium text-sm shadow-sm"
+                                        >
+                                            <Upload className="w-4 h-4" />
+                                            <span>Upload & Scan</span>
+                                        </button>
+                                    )}
+                                    
+                                    {doc.verificationStatus === 'Scanning' && (
+                                        <div className="flex items-center space-x-2 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-sm font-medium">Analyzing...</span>
+                                        </div>
+                                    )}
+
+                                    {(doc.verificationStatus === 'Verified' || doc.verificationStatus === 'Flagged') && (
+                                        <div className="flex flex-col items-end">
+                                            <span className={`flex items-center text-sm font-bold mb-2 ${doc.verificationStatus === 'Verified' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {doc.verificationStatus === 'Verified' ? <Check className="w-4 h-4 mr-1"/> : <FileWarning className="w-4 h-4 mr-1"/>}
+                                                {doc.verificationStatus === 'Verified' ? 'Verified Authentic' : 'Tampering Detected'}
+                                            </span>
+                                            <button onClick={() => removeDoc(doc.id)} className="text-xs text-slate-400 hover:text-red-500 underline">Remove & Re-upload</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div>
-                            <h4 className="font-semibold text-slate-800">{doc.name}</h4>
-                            <p className="text-sm text-slate-500">{doc.description}</p>
-                            {doc.triggerReason && (
-                                <span className="inline-block mt-1 text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    Trigger: {doc.triggerReason}
-                                </span>
+
+                            {/* Forensic Analysis Report Card */}
+                            {doc.forensicAnalysis && (
+                                <div className={`mt-3 p-3 rounded-lg border text-sm ${
+                                    doc.forensicAnalysis.isForged ? 'bg-white border-red-100' : 'bg-white border-emerald-100'
+                                }`}>
+                                    <div className="flex items-center space-x-2 mb-2">
+                                        <Microscope className={`w-4 h-4 ${doc.forensicAnalysis.isForged ? 'text-red-500' : 'text-emerald-500'}`} />
+                                        <span className="font-bold text-slate-700">Forensic Analysis Report</span>
+                                        <span className="text-xs text-slate-400">| Confidence Score: {doc.forensicAnalysis.score}%</span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                                        <div className={`p-2 rounded text-center border ${doc.forensicAnalysis.factors.metadata === 'Consistent' ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}>
+                                            <span className="block text-[10px] uppercase">Metadata</span>
+                                            <span className="text-xs">{doc.forensicAnalysis.factors.metadata}</span>
+                                        </div>
+                                        <div className={`p-2 rounded text-center border ${doc.forensicAnalysis.factors.ela === 'Pass' ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}>
+                                            <span className="block text-[10px] uppercase">Compression (ELA)</span>
+                                            <span className="text-xs">{doc.forensicAnalysis.factors.ela}</span>
+                                        </div>
+                                        <div className={`p-2 rounded text-center border ${doc.forensicAnalysis.factors.fonts === 'Consistent' ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}>
+                                            <span className="block text-[10px] uppercase">Typography</span>
+                                            <span className="text-xs">{doc.forensicAnalysis.factors.fonts}</span>
+                                        </div>
+                                        <div className={`p-2 rounded text-center border ${doc.forensicAnalysis.factors.pixel === 'Natural' ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-red-50 border-red-200 text-red-700 font-bold'}`}>
+                                            <span className="block text-[10px] uppercase">Pixel Pattern</span>
+                                            <span className="text-xs">{doc.forensicAnalysis.factors.pixel}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {doc.forensicAnalysis.reason && (
+                                        <p className={`text-xs italic ${doc.forensicAnalysis.isForged ? 'text-red-600' : 'text-slate-500'}`}>
+                                            Note: {doc.forensicAnalysis.reason}
+                                        </p>
+                                    )}
+                                </div>
                             )}
-                            </div>
-                        </div>
-                        
-                        {doc.uploaded ? (
-                            <button onClick={() => toggleUpload(doc.id)} className="text-sm text-red-500 hover:underline">Remove</button>
-                        ) : (
-                            <button 
-                            onClick={() => toggleUpload(doc.id)}
-                            className="flex items-center space-x-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 bg-white"
-                            >
-                            <Upload className="w-4 h-4" />
-                            <span>Upload</span>
-                            </button>
-                        )}
                         </div>
                     ))}
                   </div>
@@ -525,7 +645,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         {!allUploaded && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center space-x-3 mb-6">
             <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">Please upload all required documents to proceed.</span>
+            <span className="font-medium">Please upload and verify all required documents to proceed.</span>
           </div>
         )}
 

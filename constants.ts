@@ -230,11 +230,21 @@ const generateMocks = (count: number): EntityProfile[] => {
             status = ApplicationStatus.PEER_REVIEW;
             score = Math.floor(Math.random() * 40) + 10;
         } else if (roll > 0.25) {
-            // AI Auto-Approved (Clean Entities)
-            riskLevel = RiskLevel.LOW;
+            // Active Clients (Approved)
             status = ApplicationStatus.APPROVED;
-            approvedBy = 'AI';
-            score = Math.floor(Math.random() * 20); 
+            
+            // Mix of AI and Analyst approvals (Updated Logic)
+            if (Math.random() > 0.4) {
+                // AI Auto-Approved (Strictly Low Risk)
+                riskLevel = RiskLevel.LOW;
+                approvedBy = 'AI';
+                score = Math.floor(Math.random() * 20); 
+            } else {
+                // Analyst Approved (Could be Low or Medium Risk)
+                riskLevel = Math.random() > 0.5 ? RiskLevel.MEDIUM : RiskLevel.LOW;
+                approvedBy = 'Analyst';
+                score = Math.floor(Math.random() * 30) + 15;
+            }
         } else {
              // PKYC - Periodic Review (Approx 25% of population in this random set)
              status = ApplicationStatus.PERIODIC_REVIEW;

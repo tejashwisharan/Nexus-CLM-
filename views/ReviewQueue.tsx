@@ -71,6 +71,18 @@ const ReviewQueue: React.FC<ReviewQueueProps> = ({ items, onReview }) => {
                         <User className="w-4 h-4 mr-2 text-blue-500" /> Entity Profile
                     </h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
+                        {selectedEntity.jurisdiction && (
+                            <div className="col-span-2 bg-slate-50 p-3 rounded border border-slate-100 mb-2">
+                                <span className="block text-slate-500 text-xs font-bold uppercase mb-1">Jurisdiction & Tax</span>
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-slate-800">{selectedEntity.jurisdiction}</span>
+                                    {selectedEntity.taxDetails?.taxId && <span className="text-slate-600 font-mono bg-white px-2 py-0.5 rounded border">ID: {selectedEntity.taxDetails.taxId}</span>}
+                                </div>
+                                {selectedEntity.taxDetails?.fatcaStatus && <div className="text-xs text-slate-500 mt-1">FATCA: {selectedEntity.taxDetails.fatcaStatus}</div>}
+                                {selectedEntity.taxDetails?.vatNumber && <div className="text-xs text-slate-500 mt-1">VAT: {selectedEntity.taxDetails.vatNumber}</div>}
+                                {selectedEntity.taxDetails?.gstNumber && <div className="text-xs text-slate-500 mt-1">GST: {selectedEntity.taxDetails.gstNumber}</div>}
+                            </div>
+                        )}
                         {Object.entries(selectedEntity.details).map(([key, value]) => (
                             <div key={key}>
                                 <span className="block text-slate-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>

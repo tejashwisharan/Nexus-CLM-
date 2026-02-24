@@ -29,9 +29,12 @@ export const performRiskAnalysis = async (
     
     Task:
     1. Simulate a profile enrichment (imagine gathering public data).
-    2. Simulate a screening check (Adverse Media, PEP, Sanctions). If the name sounds like a known political figure or criminal (e.g. "Osama", "Pablo Escobar", "Putin"), flag it. If it is generic (e.g., "John Smith", "Tech Corp"), assume clean.
-    3. Calculate a Risk Score (0-100) based on the entity type, industry (if provided), country (if provided), and simulated screening results.
-    4. Provide specific risk factors.
+    3. Simulate a screening check (Adverse Media, PEP, Sanctions).
+       - If the name sounds like a known political figure or criminal (e.g. "Osama", "Pablo Escobar", "Putin"), flag it with high confidence.
+       - If the name is generic (e.g., "John Smith", "Tech Corp"), generate 1-2 "Potential" fuzzy matches with lower confidence scores (e.g. 60-80%) to simulate false positives that an analyst needs to review.
+       - If the name is clearly safe/unique, return no hits.
+    4. Calculate a Risk Score (0-100) based on the entity type, industry (if provided), country (if provided), and simulated screening results.
+    5. Provide specific risk factors.
     
     Return the response in strictly valid JSON format conforming to the schema.
   `;
@@ -66,7 +69,22 @@ export const performRiskAnalysis = async (
                 adverseMediaFound: { type: Type.BOOLEAN },
                 pepStatus: { type: Type.BOOLEAN },
                 sanctionsHit: { type: Type.BOOLEAN },
-                summary: { type: Type.STRING }
+                summary: { type: Type.STRING },
+                hits: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING },
+                      name: { type: Type.STRING, description: "Name found in the list (fuzzy match)" },
+                      type: { type: Type.STRING, enum: ['Sanction', 'PEP', 'Adverse Media', 'RCA'] },
+                      score: { type: Type.INTEGER, description: "0-100 match confidence" },
+                      description: { type: Type.STRING },
+                      status: { type: Type.STRING, enum: ['Potential', 'Matched', 'Unmatched', 'Unable to Resolve'] },
+                      listSource: { type: Type.STRING }
+                    }
+                  }
+                }
               }
             }
           }
@@ -82,7 +100,13 @@ export const performRiskAnalysis = async (
       riskScore: 50,
       riskLevel: RiskLevel.MEDIUM,
       riskFactors: [{ category: 'System', description: 'AI Analysis Failed - Manual Review Required', score: 50, severity: RiskLevel.MEDIUM }],
-      screeningResult: { adverseMediaFound: false, pepStatus: false, sanctionsHit: false, summary: "Automated screening unavailable." },
+      screeningResult: { 
+          adverseMediaFound: false, 
+          pepStatus: false, 
+          sanctionsHit: false, 
+          summary: "Automated screening unavailable.",
+          hits: [] 
+      },
       enrichedSummary: "Could not enrich profile due to system error."
     };
   }

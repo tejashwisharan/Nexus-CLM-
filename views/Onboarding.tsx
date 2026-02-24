@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { EntityType, DocumentRequirement, RiskLevel, EntityProfile, ApplicationStatus } from '../types';
-import { REQUIRED_DOCS_MAP, INDUSTRY_DOCS, COUNTRIES, NACE_CODES, FINANCIAL_PRODUCTS, DEMO_SCENARIOS, KEYWORD_DOCS, RISK_JURISDICTIONS, PRODUCT_DOCS, JURISDICTION_DOCS } from '../constants';
+import { EntityType, DocumentRequirement, RiskLevel, EntityProfile, ApplicationStatus, Region, TaxInfo, ScreeningHit, MatchStatus } from '../types';
+import { REQUIRED_DOCS_MAP, INDUSTRY_DOCS, COUNTRIES, NACE_CODES, FINANCIAL_PRODUCTS, DEMO_SCENARIOS, KEYWORD_DOCS, RISK_JURISDICTIONS, PRODUCT_DOCS, JURISDICTION_DOCS, TAX_REQUIREMENTS } from '../constants';
 import { performRiskAnalysis, verifyDocumentIntegrity } from '../services/geminiService';
 import RiskBadge from '../components/RiskBadge';
-import { ArrowRight, Upload, AlertCircle, Loader2, FileCheck, Search, ChevronRight, Check, Briefcase, MapPin, Mail, Globe, Zap, Bot, Sparkles, Shield, Anchor, AlertTriangle, Scale, UserCheck, Users, ScanEye, Microscope, FileWarning } from 'lucide-react';
+import { ArrowRight, Upload, AlertCircle, Loader2, FileCheck, Search, ChevronRight, Check, Briefcase, MapPin, Mail, Globe, Zap, Bot, Sparkles, Shield, Anchor, AlertTriangle, Scale, UserCheck, Users, ScanEye, Microscope, FileWarning, Landmark, XCircle, HelpCircle } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (entity: EntityProfile) => void;
@@ -16,7 +16,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   
   // Form State
   const [entityType, setEntityType] = useState<EntityType | ''>('');
+  const [selectedRegion, setSelectedRegion] = useState<Region | ''>('');
   const [formData, setFormData] = useState<any>({});
+  const [taxInfo, setTaxInfo] = useState<TaxInfo>({});
   const [requiredDocs, setRequiredDocs] = useState<DocumentRequirement[]>([]);
   const [uploadAttempts, setUploadAttempts] = useState<Record<string, number>>({});
   // activePolicies is calculated but not visually shown anymore
@@ -24,6 +26,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   
   // Analysis State
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [screeningHits, setScreeningHits] = useState<ScreeningHit[]>([]);
 
   // --- Policy Engine & Rules ---
 
@@ -106,6 +109,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const handleScenarioClick = (scenario: any) => {
     setEntityType(scenario.type);
     setFormData(scenario.data);
+    setSelectedRegion(scenario.region || '');
+    setTaxInfo(scenario.taxInfo || {});
     runPolicyEngine(scenario.type, scenario.data);
     setStep(2);
   };
@@ -178,7 +183,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // --- Step 2: Dynamic Extensive Form (Policy Engine runs in background) ---
   const renderStep2 = () => {
     const isIndividual = entityType === EntityType.INDIVIDUAL;
-    const canProceed = formData.name && formData.email && formData.product && (isIndividual ? formData.nationality : (formData.industry && formData.chairman && formData.ubos));
+    
+    // Validate Tax Info
+    const isTaxValid = selectedRegion && TAX_REQUIREMENTS[selectedRegion].every(req => !req.required || (taxInfo as any)[req.key]);
+
+    const canProceed = formData.name && formData.email && formData.product && (isIndividual ? formData.nationality : (formData.industry && formData.chairman && formData.ubos)) && isTaxValid;
 
     return (
       <div className="max-w-4xl mx-auto">
@@ -403,7 +412,54 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             <div className="border-t border-slate-100 pt-6"></div>
 
-            {/* Section 3: Commercial & Service Request */}
+            {/* Section 3: Tax & Regulatory Compliance */}
+            <div>
+                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4 flex items-center">
+                <Landmark className="w-4 h-4 mr-2" /> Tax & Regulatory Compliance
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Jurisdiction / Region <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-3 gap-4">
+                            {Object.values(Region).map((r) => (
+                                <button
+                                    key={r}
+                                    onClick={() => {
+                                        setSelectedRegion(r);
+                                        setTaxInfo({}); // Reset tax info on region switch
+                                    }}
+                                    className={`p-3 rounded-lg border text-center transition-all ${
+                                        selectedRegion === r 
+                                        ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' 
+                                        : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+                                    }`}
+                                >
+                                    {r}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {selectedRegion && TAX_REQUIREMENTS[selectedRegion].map((field) => (
+                        <div key={field.key}>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                {field.label} {field.required && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                                type="text"
+                                value={(taxInfo as any)[field.key] || ''}
+                                onChange={(e) => setTaxInfo({ ...taxInfo, [field.key]: e.target.value })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+                                placeholder={field.desc}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-6"></div>
+
+            {/* Section 4: Commercial & Service Request */}
             <div>
                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-4 flex items-center">
                 <Mail className="w-4 h-4 mr-2" /> Service Request & Due Diligence
@@ -518,6 +574,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       // Call Gemini API
       const result = await performRiskAnalysis(formData.name, entityType as string, formData);
       setAnalysisResult(result);
+      setScreeningHits(result.screeningResult.hits || []);
       setIsAnalyzing(false);
     };
 
@@ -678,7 +735,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     );
   };
 
-  // --- Step 4: Analysis Results ---
+  // --- Step 4: Screening Review (Fuzzy Matches) ---
   const renderStep4 = () => {
     if (isAnalyzing) {
       return (
@@ -692,19 +749,160 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
     if (!analysisResult) return null;
 
-    const { riskScore, riskLevel, riskFactors, screeningResult, enrichedSummary } = analysisResult;
-    const isHighRisk = riskLevel === RiskLevel.HIGH;
+    const handleDisposition = (id: string, status: MatchStatus) => {
+        setScreeningHits(prev => prev.map(h => h.id === id ? { ...h, status } : h));
+    };
+
+    const allResolved = screeningHits.every(h => h.status !== 'Potential');
+    const hasConfirmedHits = screeningHits.some(h => h.status === 'Matched');
+
+    if (screeningHits.length === 0) {
+        return (
+            <div className="max-w-2xl mx-auto text-center py-10 bg-white rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-emerald-50 p-6 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                    <Check className="w-10 h-10 text-emerald-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-800">Screening Complete</h3>
+                <p className="text-slate-500 mt-2 mb-8">No adverse media, sanctions, or PEP matches found.</p>
+                <button 
+                    onClick={() => setStep(5)} 
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                >
+                    Continue to Final Review
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-5xl mx-auto space-y-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800 flex items-center">
+                            <ScanEye className="w-6 h-6 mr-2 text-blue-600" />
+                            Screening Hits Review
+                        </h3>
+                        <p className="text-slate-500 text-sm mt-1">
+                            {screeningHits.length} potential matches found. Please disposition each hit.
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <span className={`text-sm font-bold px-3 py-1 rounded-full ${allResolved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {allResolved ? 'All Resolved' : 'Pending Review'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {screeningHits.map((hit) => (
+                        <div key={hit.id} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-all">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${
+                                            hit.type === 'Sanction' ? 'bg-red-100 text-red-700' :
+                                            hit.type === 'PEP' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-slate-100 text-slate-700'
+                                        }`}>
+                                            {hit.type}
+                                        </span>
+                                        <span className="text-xs text-slate-400 font-mono">Score: {hit.score}%</span>
+                                    </div>
+                                    <h4 className="font-bold text-slate-800">{hit.name}</h4>
+                                    <p className="text-sm text-slate-600 mt-1">{hit.description}</p>
+                                    {hit.listSource && <p className="text-xs text-slate-400 mt-1">Source: {hit.listSource}</p>}
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => handleDisposition(hit.id, 'Matched')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                                            hit.status === 'Matched' 
+                                            ? 'bg-red-600 text-white shadow-sm' 
+                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600'
+                                        }`}
+                                    >
+                                        Match
+                                    </button>
+                                    <button
+                                        onClick={() => handleDisposition(hit.id, 'Unmatched')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                                            hit.status === 'Unmatched' 
+                                            ? 'bg-emerald-600 text-white shadow-sm' 
+                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                        }`}
+                                    >
+                                        False Positive
+                                    </button>
+                                    <button
+                                        onClick={() => handleDisposition(hit.id, 'Unable to Resolve')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                                            hit.status === 'Unable to Resolve' 
+                                            ? 'bg-slate-600 text-white shadow-sm' 
+                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        Unresolved
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+                     <button
+                        onClick={() => setStep(5)}
+                        disabled={!allResolved}
+                        className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-colors ${
+                            allResolved 
+                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                    >
+                        <span>Confirm Disposition & View Analysis</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+  };
+
+  // --- Step 5: Final Decision (Analysis Results) ---
+  const renderStep5 = () => {
+    if (!analysisResult) return null;
+
+    const { riskScore, riskLevel: aiRiskLevel, riskFactors, screeningResult, enrichedSummary } = analysisResult;
     
-    // AI Agent Criteria:
+    // Recalculate Risk based on Disposition
+    const confirmedHits = screeningHits.filter(h => h.status === 'Matched');
+    const unresolvedHits = screeningHits.filter(h => h.status === 'Unable to Resolve');
+    
+    let finalRiskLevel = aiRiskLevel;
+    let finalRiskScore = riskScore;
+    let statusOverride: ApplicationStatus | undefined = undefined;
+
+    if (confirmedHits.length > 0) {
+        finalRiskLevel = RiskLevel.HIGH;
+        finalRiskScore = Math.max(riskScore, 95);
+        statusOverride = ApplicationStatus.REVIEW_REQUIRED;
+    } else if (unresolvedHits.length > 0) {
+        finalRiskLevel = RiskLevel.HIGH; // Unresolved is risky
+        statusOverride = ApplicationStatus.REVIEW_REQUIRED;
+    }
+
+    const isHighRisk = finalRiskLevel === RiskLevel.HIGH;
+    
+    // AI Agent Criteria (Updated):
     // 1. Low Risk
-    // 2. No Sanctions, PEP, or Adverse Media
-    // 3. Risk Score < 25 (Strict threshold)
-    // 4. No high severity risk factors
-    const isClean = riskLevel === RiskLevel.LOW && 
-                    !screeningResult.sanctionsHit &&
-                    !screeningResult.pepStatus &&
-                    !screeningResult.adverseMediaFound &&
-                    riskScore < 25;
+    // 2. No Confirmed Hits
+    // 3. Risk Score < 25
+    const isClean = finalRiskLevel === RiskLevel.LOW && 
+                    confirmedHits.length === 0 &&
+                    unresolvedHits.length === 0 &&
+                    finalRiskScore < 25;
 
     const handleFinish = (overrideStatus?: ApplicationStatus) => {
       const newEntity: EntityProfile = {
@@ -712,14 +910,22 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         type: entityType as EntityType,
         name: formData.name,
         details: formData,
+        region: selectedRegion as Region,
+        taxInfo: taxInfo,
         documents: requiredDocs,
-        riskScore,
-        riskLevel,
-        riskFactors,
-        screeningResult,
+        riskScore: finalRiskScore,
+        riskLevel: finalRiskLevel,
+        riskFactors: [
+            ...riskFactors,
+            ...confirmedHits.map(h => ({ category: 'Screening Match', description: `Confirmed ${h.type}: ${h.name}`, score: 100, severity: RiskLevel.HIGH }))
+        ],
+        screeningResult: {
+            ...screeningResult,
+            hits: screeningHits // Save the dispositioned hits
+        },
         createdAt: new Date().toISOString(),
         enrichedData: enrichedSummary,
-        status: overrideStatus || (isHighRisk 
+        status: overrideStatus || statusOverride || (isHighRisk 
           ? ApplicationStatus.REVIEW_REQUIRED 
           : isClean 
             ? ApplicationStatus.APPROVED 
@@ -739,7 +945,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             </div>
             <div className="mt-4 md:mt-0 text-right">
                 <div className="text-sm text-slate-500 mb-1">Risk Assessment</div>
-                <RiskBadge level={riskLevel} score={riskScore} />
+                <RiskBadge level={finalRiskLevel} score={finalRiskScore} />
             </div>
         </div>
 
@@ -763,19 +969,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Screening Results */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="font-bold text-slate-800 mb-4 border-b pb-2">Screening Results</h3>
+                <h3 className="font-bold text-slate-800 mb-4 border-b pb-2">Screening Disposition</h3>
                 <ul className="space-y-3">
                     <li className="flex justify-between items-center">
-                        <span className="text-slate-600">Sanctions Hit</span>
-                        {screeningResult.sanctionsHit ? <span className="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">DETECTED</span> : <span className="text-emerald-600 font-medium flex items-center"><Check className="w-4 h-4 mr-1"/> Clear</span>}
+                        <span className="text-slate-600">Total Hits</span>
+                        <span className="font-bold text-slate-800">{screeningHits.length}</span>
                     </li>
                     <li className="flex justify-between items-center">
-                        <span className="text-slate-600">PEP Status</span>
-                        {screeningResult.pepStatus ? <span className="text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded">CONFIRMED</span> : <span className="text-emerald-600 font-medium flex items-center"><Check className="w-4 h-4 mr-1"/> None</span>}
+                        <span className="text-slate-600">Confirmed Matches</span>
+                        {confirmedHits.length > 0 ? <span className="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">{confirmedHits.length} DETECTED</span> : <span className="text-emerald-600 font-medium flex items-center"><Check className="w-4 h-4 mr-1"/> None</span>}
                     </li>
                     <li className="flex justify-between items-center">
-                        <span className="text-slate-600">Adverse Media</span>
-                        {screeningResult.adverseMediaFound ? <span className="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">FOUND</span> : <span className="text-emerald-600 font-medium flex items-center"><Check className="w-4 h-4 mr-1"/> None</span>}
+                        <span className="text-slate-600">False Positives</span>
+                        <span className="text-slate-600 font-medium">{screeningHits.filter(h => h.status === 'Unmatched').length}</span>
                     </li>
                 </ul>
             </div>
@@ -875,14 +1081,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     <div className="space-y-8 pb-12">
       {/* Stepper */}
       <div className="flex justify-center space-x-4 mb-8">
-        {[1, 2, 3, 4].map((s) => (
+        {[1, 2, 3, 4, 5].map((s) => (
           <div key={s} className="flex items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
               step === s ? 'bg-blue-600 text-white' : step > s ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
             }`}>
               {step > s ? <Check className="w-5 h-5"/> : s}
             </div>
-            {s < 4 && <div className={`w-12 h-1 mx-2 ${step > s ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+            {s < 5 && <div className={`w-12 h-1 mx-2 ${step > s ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
           </div>
         ))}
       </div>
@@ -891,6 +1097,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
       {step === 4 && renderStep4()}
+      {step === 5 && renderStep5()}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EntityProfile, ApplicationStatus } from '../types';
 import RiskBadge from '../components/RiskBadge';
-import { CheckCircle, ChevronLeft, ChevronRight, Search, User, FileCheck, ShieldCheck, Bot, UserCheck, Briefcase } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Search, User, FileCheck, ShieldCheck, Bot, UserCheck, Briefcase, Database, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface ActiveClientsQueueProps {
   items: EntityProfile[];
@@ -10,7 +10,22 @@ interface ActiveClientsQueueProps {
 const ActiveClientsQueue: React.FC<ActiveClientsQueueProps> = ({ items }) => {
   const activeItems = items.filter(i => i.status === ApplicationStatus.APPROVED);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [showLegacyOnly, setShowLegacyOnly] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  
   const selectedEntity = items.find(i => i.id === selectedEntityId);
+
+  const handleScan = () => {
+      setIsScanning(true);
+      setTimeout(() => {
+          setIsScanning(false);
+          setShowLegacyOnly(true);
+      }, 1500);
+  };
+
+  const filteredItems = showLegacyOnly 
+    ? activeItems.filter(i => i.isLegacy) 
+    : activeItems;
 
   // Detail View
   if (selectedEntity) {
@@ -31,6 +46,11 @@ const ActiveClientsQueue: React.FC<ActiveClientsQueueProps> = ({ items }) => {
                         <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded border border-emerald-200 uppercase flex items-center">
                             <CheckCircle className="w-3 h-3 mr-1" /> Active Client
                         </span>
+                        {selectedEntity.isLegacy && (
+                            <span className={`text-xs font-bold px-2 py-1 rounded border uppercase flex items-center ${selectedEntity.amlCompliant ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
+                                <Database className="w-3 h-3 mr-1" /> {selectedEntity.amlCompliant ? 'Legacy: Compliant' : 'Legacy: Non-Compliant'}
+                            </span>
+                        )}
                     </div>
                     <p className="text-slate-500 text-sm">{selectedEntity.type} • ID: {selectedEntity.id}</p>
                 </div>
@@ -116,12 +136,36 @@ const ActiveClientsQueue: React.FC<ActiveClientsQueueProps> = ({ items }) => {
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Active Client Portfolio</h2>
           <p className="text-slate-500">
-             Total <span className="font-bold text-emerald-600">{activeItems.length}</span> active entities (AI & Analyst Approved).
+             Total <span className="font-bold text-emerald-600">{activeItems.length}</span> active entities.
           </p>
         </div>
-        <div className="bg-white px-4 py-2 border border-slate-200 rounded-lg flex items-center text-slate-400">
-            <Search className="w-4 h-4 mr-2" />
-            <span className="text-sm">Filter clients...</span>
+        <div className="flex space-x-3">
+            <button 
+                onClick={handleScan}
+                disabled={isScanning}
+                className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all shadow-sm ${
+                    showLegacyOnly 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                    : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300'
+                }`}
+            >
+                {isScanning ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Database className="w-4 h-4 mr-2" />}
+                {isScanning ? 'Scanning Database...' : 'Scan Legacy Entities'}
+            </button>
+            
+            {showLegacyOnly && (
+                <button 
+                    onClick={() => setShowLegacyOnly(false)}
+                    className="text-sm text-slate-500 hover:text-slate-700 underline"
+                >
+                    Clear Filter
+                </button>
+            )}
+
+            <div className="bg-white px-4 py-2 border border-slate-200 rounded-lg flex items-center text-slate-400">
+                <Search className="w-4 h-4 mr-2" />
+                <span className="text-sm">Filter clients...</span>
+            </div>
         </div>
       </div>
 
@@ -131,14 +175,15 @@ const ActiveClientsQueue: React.FC<ActiveClientsQueueProps> = ({ items }) => {
                 <tr>
                     <th className="px-6 py-4 font-semibold">Entity Name</th>
                     <th className="px-6 py-4 font-semibold">Risk Profile</th>
-                    <th className="px-6 py-4 font-semibold">Approved By</th>
+                    <th className="px-6 py-4 font-semibold">Onboarded By</th>
+                    <th className="px-6 py-4 font-semibold">Source / Status</th>
                     <th className="px-6 py-4 font-semibold">Onboarded Date</th>
                     <th className="px-6 py-4 font-semibold text-right">Action</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-                {activeItems.map((entity) => (
-                    <tr key={entity.id} className="hover:bg-slate-50 transition-colors group">
+                {filteredItems.map((entity) => (
+                    <tr key={entity.id} className={`hover:bg-slate-50 transition-colors group ${entity.isLegacy && !entity.amlCompliant ? 'bg-red-50/30' : ''}`}>
                         <td className="px-6 py-4">
                             <div className="font-bold text-slate-800">{entity.name}</div>
                             <div className="text-xs text-slate-400 font-mono">{entity.id} • {entity.type}</div>
@@ -156,6 +201,26 @@ const ActiveClientsQueue: React.FC<ActiveClientsQueueProps> = ({ items }) => {
                                 <div className="flex items-center text-blue-700 text-sm font-medium bg-blue-50 w-fit px-2 py-1 rounded border border-blue-100">
                                     <UserCheck className="w-3 h-3 mr-1.5" />
                                     Analyst
+                                </div>
+                             )}
+                        </td>
+                        <td className="px-6 py-4">
+                             {entity.isLegacy ? (
+                                 <div className={`flex items-center text-xs font-bold uppercase px-2 py-1 rounded w-fit border ${
+                                     entity.amlCompliant 
+                                     ? 'bg-blue-50 text-blue-700 border-blue-100' 
+                                     : 'bg-red-100 text-red-700 border-red-200'
+                                 }`}>
+                                     {entity.amlCompliant ? (
+                                         <><Database className="w-3 h-3 mr-1.5" /> Legacy: Compliant</>
+                                     ) : (
+                                         <><AlertTriangle className="w-3 h-3 mr-1.5" /> Non-Compliant</>
+                                     )}
+                                 </div>
+                             ) : (
+                                <div className="flex items-center text-emerald-700 text-xs font-bold uppercase bg-emerald-50 w-fit px-2 py-1 rounded border border-emerald-100">
+                                    <Bot className="w-3 h-3 mr-1.5" />
+                                    Native System
                                 </div>
                              )}
                         </td>

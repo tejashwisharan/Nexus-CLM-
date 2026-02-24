@@ -59,11 +59,39 @@ export interface RiskFactor {
   severity: RiskLevel;
 }
 
+export type ScreeningHitType = 'Sanction' | 'PEP' | 'Adverse Media' | 'RCA';
+export type MatchStatus = 'Potential' | 'Matched' | 'Unmatched' | 'Unable to Resolve';
+
+export interface ScreeningHit {
+  id: string;
+  name: string; // Name found in the list
+  type: ScreeningHitType;
+  score: number; // Fuzzy match score (0-100)
+  description: string;
+  status: MatchStatus;
+  listSource?: string; // e.g., "OFAC", "WorldCheck"
+}
+
 export interface ScreeningResult {
   adverseMediaFound: boolean;
   pepStatus: boolean;
   sanctionsHit: boolean;
   summary: string;
+  hits: ScreeningHit[];
+}
+
+export enum Region {
+  USA = 'USA',
+  EU = 'EU',
+  APAC = 'APAC'
+}
+
+export interface TaxInfo {
+  taxId?: string; // Generic Tax ID
+  fatcaStatus?: string; // USA
+  crsNumber?: string; // EU/APAC
+  tin?: string; // Tax Identification Number
+  giin?: string; // Global Intermediary Identification Number (FATCA)
 }
 
 export interface EntityProfile {
@@ -71,6 +99,8 @@ export interface EntityProfile {
   type: EntityType;
   name: string; // Full name or Company name
   details: Record<string, any>; // Dynamic fields
+  region?: Region; // New field for jurisdiction
+  taxInfo?: TaxInfo; // New field for tax compliance
   documents: DocumentRequirement[];
   riskScore: number;
   riskLevel: RiskLevel;
@@ -89,6 +119,10 @@ export interface EntityProfile {
 
   // Off-boarding Fields
   offboardingReason?: string;
+
+  // Legacy / Migration Fields
+  isLegacy?: boolean; // Imported from previous system
+  amlCompliant?: boolean; // Flag for legacy entities
 }
 
 export interface SearchResult {

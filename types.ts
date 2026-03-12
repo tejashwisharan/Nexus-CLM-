@@ -92,6 +92,7 @@ export interface TaxInfo {
   crsNumber?: string; // EU/APAC
   tin?: string; // Tax Identification Number
   giin?: string; // Global Intermediary Identification Number (FATCA)
+  vatNumber?: string; // EU VAT Number
 }
 
 export interface EntityProfile {

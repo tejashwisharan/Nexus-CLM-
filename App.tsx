@@ -11,6 +11,7 @@ import PKYCQueue from './views/PKYCQueue';
 import OffboardingQueue from './views/OffboardingQueue';
 import RejectedQueue from './views/RejectedQueue';
 import WorkflowDiagram from './components/WorkflowDiagram';
+import FloatingChatbot from './components/FloatingChatbot';
 import { MOCK_DATABASE } from './constants';
 import { EntityProfile, ApplicationStatus, RiskLevel } from './types';
 import RiskBadge from './components/RiskBadge';
@@ -239,6 +240,7 @@ const App: React.FC = () => {
       {activeTab === 'waivers' && <WaiverQueue items={database} onDecision={handleWaiverDecision} />}
       {activeTab === 'rejected' && <RejectedQueue items={database} />}
       {activeTab === 'search' && <EntitySearch database={database} />}
+      <FloatingChatbot currentContext={`User is currently viewing the ${activeTab} page.`} />
     </Layout>
   );
 };

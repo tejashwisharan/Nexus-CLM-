@@ -228,3 +228,31 @@ export const verifyDocumentIntegrity = async (docName: string, shouldFail?: bool
         return defaultResult;
     }
 };
+
+// 4. Chatbot Assistant
+export const askChatbot = async (query: string, context: string): Promise<string> => {
+  const prompt = `
+    You are an expert KYC and AML Compliance Assistant integrated into the Nexus CLM platform.
+    Your role is to help analysts understand their tasks, explain compliance regulations, and guide them through the onboarding and screening workflows.
+    
+    Current Context (What the user is looking at or doing):
+    ${context}
+    
+    User Query:
+    "${query}"
+    
+    Provide a clear, concise, and helpful response. Use your knowledge of KYC, AML, PEPs, Sanctions, and general compliance best practices.
+    Keep the response professional and actionable.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+    });
+    return response.text || "I'm sorry, I couldn't process that request.";
+  } catch (error) {
+    console.error("Chatbot Error:", error);
+    return "I'm currently experiencing technical difficulties. Please try again later.";
+  }
+};

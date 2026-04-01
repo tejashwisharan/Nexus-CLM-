@@ -1,25 +1,30 @@
 import React from 'react';
-import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus, CheckCircle, Ban } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus, CheckCircle, Ban, FileSearch, Network, FileText } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  selectedModules: string[];
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const navItems = [
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, selectedModules }) => {
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'onboarding', label: 'Onboarding', icon: UserPlus },
+    { id: 'onboarding', label: 'Screening', icon: UserPlus },
     { id: 'active-clients', label: 'Active Clients', icon: CheckCircle },
     { id: 'peer-review', label: 'Peer Review', icon: UserCheck },
     { id: 'pkyc', label: 'PKYC / Monitoring', icon: RefreshCw },
+    { id: 'compliance-checks', label: 'Compliance Checks', icon: ShieldCheck },
     { id: 'offboarding', label: 'Off-boarding', icon: UserMinus }, 
-    { id: 'queue', label: 'EDD Queue', icon: ListChecks }, 
-    { id: 'waivers', label: 'Waiver Assessment', icon: Flag },
+    { id: 'queue', label: 'CDD Queue', icon: ListChecks }, 
+    { id: 'edd', label: 'EDD Queue', icon: FileSearch },
+    { id: 'policy-waivers', label: 'Policy Waivers', icon: Flag },
     { id: 'rejected', label: 'Rejected', icon: Ban },
     { id: 'search', label: 'Entity Search', icon: Search },
   ];
+
+  const navItems = allNavItems.filter(item => selectedModules.includes(item.id));
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">

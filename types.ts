@@ -18,6 +18,7 @@ export enum ApplicationStatus {
   DRAFT = 'Draft',
   PENDING_SCREENING = 'Pending Screening',
   PEER_REVIEW = 'Peer Review', // Low/Medium Risk awaiting final check
+  CDD_REVIEW = 'CDD Review', // Medium Risk / Standard
   REVIEW_REQUIRED = 'EDD Review', // High Risk / Sanctions
   WAIVER_REQUESTED = 'Waiver Requested', // Policy Exception needed
   PERIODIC_REVIEW = 'Periodic Review', // PKYC: Scheduled or Event-Driven

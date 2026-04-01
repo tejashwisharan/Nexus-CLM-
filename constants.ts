@@ -261,9 +261,9 @@ const generateMocks = (count: number): EntityProfile[] => {
             score = Math.floor(Math.random() * 40) + 40;
             waiverReason = WAIVER_REASONS[Math.floor(Math.random() * WAIVER_REASONS.length)];
         } else if (roll > 0.55) {
-             // Peer Review
+             // Peer Review / CDD Review
             riskLevel = Math.random() > 0.5 ? RiskLevel.LOW : RiskLevel.MEDIUM;
-            status = ApplicationStatus.PEER_REVIEW;
+            status = riskLevel === RiskLevel.MEDIUM ? ApplicationStatus.CDD_REVIEW : ApplicationStatus.PEER_REVIEW;
             score = Math.floor(Math.random() * 40) + 10;
         } else if (roll > 0.25) {
             // Active Clients (Approved)

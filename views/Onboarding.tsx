@@ -128,21 +128,21 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
            </h3>
            <p className="text-slate-500 text-sm mt-1">Select a pre-configured scenario to auto-populate the form for testing.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {DEMO_SCENARIOS.map((scenario) => (
              <button
                 key={scenario.id}
                 onClick={() => handleScenarioClick(scenario)}
-                className="text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group"
+                className="text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group"
              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${scenario.risk === 'High' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                <div className="flex justify-between items-start mb-3">
+                  <span className={`text-base font-bold px-3 py-1.5 rounded-md ${scenario.risk === 'High' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                     {scenario.risk} Risk
                   </span>
-                  <Zap className="w-4 h-4 text-slate-300 group-hover:text-amber-500" />
+                  <Zap className="w-6 h-6 text-slate-300 group-hover:text-amber-500" />
                 </div>
-                <h4 className="font-bold text-slate-800 text-sm mb-1">{scenario.label}</h4>
-                <p className="text-xs text-slate-500">{scenario.desc}</p>
+                <h4 className="font-bold text-slate-800 text-lg mb-1.5">{scenario.label}</h4>
+                <p className="text-base text-slate-500 leading-relaxed">{scenario.desc}</p>
              </button>
           ))}
         </div>
@@ -156,7 +156,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           <h3 className="text-xl font-bold text-slate-800">Manual Entry</h3>
           <p className="text-slate-500 text-sm mt-1">Start a fresh application from scratch.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {Object.values(EntityType).map((type) => (
             <button
               key={type}
@@ -166,13 +166,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 runPolicyEngine(type, {});
                 setStep(2);
               }}
-              className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group bg-white shadow-sm"
+              className="p-5 border border-slate-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group bg-white shadow-sm"
             >
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-bold text-slate-700 group-hover:text-blue-700">{type}</span>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
+              <div className="flex justify-between items-center mb-3">
+                <span className="font-bold text-slate-700 text-xl group-hover:text-blue-700">{type}</span>
+                <ChevronRight className="w-7 h-7 text-slate-300 group-hover:text-blue-500" />
               </div>
-              <p className="text-xs text-slate-400">Initiate onboarding for {type.toLowerCase()}.</p>
+              <p className="text-base text-slate-400">Initiate onboarding for {type.toLowerCase()}.</p>
             </button>
           ))}
         </div>
@@ -929,7 +929,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           ? ApplicationStatus.REVIEW_REQUIRED 
           : isClean 
             ? ApplicationStatus.APPROVED 
-            : ApplicationStatus.PEER_REVIEW),
+            : finalRiskLevel === RiskLevel.MEDIUM 
+              ? ApplicationStatus.CDD_REVIEW
+              : ApplicationStatus.PEER_REVIEW),
         approvedBy: (isClean && !overrideStatus && !isHighRisk) ? 'AI' : undefined
       };
       onComplete(newEntity);
@@ -1041,7 +1043,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             ? 'This application will be routed to the Enhanced Due Diligence (EDD) Queue.' 
                             : isClean 
                                 ? 'AI Agent has verified all details. Click to instant-onboard.' 
-                                : 'Minor deviations or medium risk found. Routing to Peer Review.'}
+                                : finalRiskLevel === RiskLevel.MEDIUM
+                                  ? 'Medium risk found. Routing to Customer Due Diligence (CDD) Queue.'
+                                  : 'Minor deviations found. Routing to Peer Review.'}
                     </p>
                 </div>
                 
@@ -1067,6 +1071,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     >
                         {isHighRisk ? 'Submit to EDD Queue' : 
                          isClean ? <><Bot className="w-4 h-4 mr-2"/> Auto-Onboard</> : 
+                         finalRiskLevel === RiskLevel.MEDIUM ? 'Submit to CDD Queue' :
                          'Submit to Peer Review'}
                     </button>
                 </div>

@@ -11,9 +11,10 @@ interface Message {
 
 interface FloatingChatbotProps {
   currentContext?: string;
+  selectedModules: string[];
 }
 
-const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'General Application View' }) => {
+const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'General Application View', selectedModules }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -51,7 +52,7 @@ const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'Gen
     setIsLoading(true);
 
     try {
-      const response = await askChatbot(userMessage.content, currentContext);
+      const response = await askChatbot(userMessage.content, currentContext, selectedModules);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

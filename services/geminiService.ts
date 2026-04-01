@@ -230,10 +230,17 @@ export const verifyDocumentIntegrity = async (docName: string, shouldFail?: bool
 };
 
 // 4. Chatbot Assistant
-export const askChatbot = async (query: string, context: string): Promise<string> => {
+export const askChatbot = async (query: string, context: string, selectedModules: string[]): Promise<string> => {
   const prompt = `
     You are an expert KYC and AML Compliance Assistant integrated into the Nexus CLM platform.
     Your role is to help analysts understand their tasks, explain compliance regulations, and guide them through the onboarding and screening workflows.
+    
+    CRITICAL INSTRUCTION:
+    The user has configured their workspace to ONLY include the following modules:
+    [${selectedModules.join(', ')}]
+    
+    If the user asks a question about a module, feature, or topic that is NOT included in the list of selected modules above, you MUST NOT hallucinate or provide an answer. 
+    Instead, you MUST clearly state: "I don't have the information" and explain that you cannot answer because the relevant module is not active in their current workspace configuration.
     
     Current Context (What the user is looking at or doing):
     ${context}

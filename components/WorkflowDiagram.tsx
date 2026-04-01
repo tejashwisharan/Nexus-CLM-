@@ -67,11 +67,11 @@ const WorkflowDiagram: React.FC<WorkflowDiagramProps> = ({ database }) => {
     {
       id: 'edd',
       label: 'Due Diligence',
-      count: getCount([ApplicationStatus.REVIEW_REQUIRED]),
+      count: getCount([ApplicationStatus.REVIEW_REQUIRED, ApplicationStatus.CDD_REVIEW]),
       x: 65, y: 25,
       icon: <ShieldAlert className="w-4 h-4" />,
-      description: 'High Risk Review',
-      statusMatch: [ApplicationStatus.REVIEW_REQUIRED]
+      description: 'High/Medium Risk Review',
+      statusMatch: [ApplicationStatus.REVIEW_REQUIRED, ApplicationStatus.CDD_REVIEW]
     },
     {
       id: 'waiver',

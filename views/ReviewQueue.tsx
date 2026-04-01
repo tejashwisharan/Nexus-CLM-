@@ -6,10 +6,21 @@ import { UserCheck, UserX, Flag, FileText, AlertTriangle, Check, FileCheck, Chev
 interface ReviewQueueProps {
   items: EntityProfile[];
   onReview: (id: string, action: 'approve' | 'reject' | 'waiver', reason?: string) => void;
+  statusFilter?: ApplicationStatus;
+  title?: string;
+  emptyMessage?: string;
+  description?: string;
 }
 
-const ReviewQueue: React.FC<ReviewQueueProps> = ({ items, onReview }) => {
-  const pendingItems = items.filter(i => i.status === ApplicationStatus.REVIEW_REQUIRED);
+const ReviewQueue: React.FC<ReviewQueueProps> = ({ 
+  items, 
+  onReview, 
+  statusFilter = ApplicationStatus.REVIEW_REQUIRED,
+  title = "EDD Queue",
+  emptyMessage = "No entities pending review.",
+  description = "Enhanced Due Diligence required for"
+}) => {
+  const pendingItems = items.filter(i => i.status === statusFilter);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [waiverReason, setWaiverReason] = useState<string>('');
   const [showWaiverInput, setShowWaiverInput] = useState<boolean>(false);
@@ -23,8 +34,8 @@ const ReviewQueue: React.FC<ReviewQueueProps> = ({ items, onReview }) => {
         <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <UserCheck className="w-12 h-12 text-slate-400" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800">EDD Queue Empty</h2>
-        <p className="text-slate-500 mt-2">No high-risk entities pending enhanced due diligence.</p>
+        <h2 className="text-2xl font-bold text-slate-800">{title} Empty</h2>
+        <p className="text-slate-500 mt-2">{emptyMessage}</p>
       </div>
     );
   }
@@ -247,8 +258,8 @@ const ReviewQueue: React.FC<ReviewQueueProps> = ({ items, onReview }) => {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">EDD Queue</h2>
-          <p className="text-slate-500">Enhanced Due Diligence required for <span className="font-bold text-slate-800">{pendingItems.length}</span> high-risk entities.</p>
+          <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
+          <p className="text-slate-500">{description} <span className="font-bold text-slate-800">{pendingItems.length}</span> entities.</p>
         </div>
         <div className="bg-white px-4 py-2 border border-slate-200 rounded-lg flex items-center text-slate-400">
             <Search className="w-4 h-4 mr-2" />

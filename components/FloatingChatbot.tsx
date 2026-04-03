@@ -21,7 +21,7 @@ const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'Gen
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I am your Compliance Assistant. How can I help you with KYC, AML, or the onboarding workflow today?'
+      content: 'Hello! I am My Precious. How can I help you with KYC, AML, or the onboarding workflow today?'
     }
   ]);
   const [input, setInput] = useState('');
@@ -84,7 +84,7 @@ const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'Gen
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all z-50 flex items-center justify-center group"
-        aria-label="Open Compliance Assistant"
+        aria-label="Open My Precious"
       >
         <Bot className="w-6 h-6 group-hover:scale-110 transition-transform" />
       </button>
@@ -104,7 +104,7 @@ const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext = 'Gen
       >
         <div className="flex items-center space-x-2">
           <Bot className="w-5 h-5" />
-          <span className="font-semibold text-sm">Compliance Assistant</span>
+          <span className="font-semibold text-sm">My Precious</span>
         </div>
         <div className="flex items-center space-x-1">
           <button 

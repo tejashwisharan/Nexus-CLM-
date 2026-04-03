@@ -40,7 +40,7 @@ export const AVAILABLE_MODULES: ModuleConfig[] = [
   { id: 'pkyc', name: 'Perpetual KYC (PKYC)', description: 'Continuous monitoring and periodic reviews', icon: RefreshCw },
   { id: 'search', name: 'Entity Search', description: 'Global search across all client records', icon: Search },
   { id: 'offboarding', name: 'Offboarding', description: 'Manage client exits and account closures', icon: UserMinus },
-  { id: 'ai-assistant', name: 'AI Assistant', description: 'AI chatbot for operational support and queries', icon: Bot },
+  { id: 'ai-assistant', name: 'My Precious', description: 'AI chatbot for operational support and queries', icon: Bot },
 ];
 
 interface ConfigurationPageProps {

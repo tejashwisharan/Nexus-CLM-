@@ -230,23 +230,34 @@ export const verifyDocumentIntegrity = async (docName: string, shouldFail?: bool
 };
 
 // 4. Chatbot Assistant
-export const askChatbot = async (query: string, context: string, selectedModules: string[]): Promise<string> => {
+export const askChatbot = async (query: string, context: string, selectedModules: string[], caseHistory?: string): Promise<string> => {
   const prompt = `
-    You are an expert KYC and AML Compliance Assistant integrated into the Nexus CLM platform.
-    Your role is to help analysts understand their tasks, explain compliance regulations, and guide them through the onboarding and screening workflows.
+    You are "My Precious", an expert KYC and AML Compliance Assistant integrated into the Nexus CLM platform.
+    Your primary goal is to reduce the cognitive load on the user by acting as an on-demand subject matter expert. You must explain why the system is behaving in a certain way, why certain fields are mandatory, or why specific questions are being asked, so the user does not need to read extensive documentation.
     
     CRITICAL INSTRUCTIONS:
-    1. The user has configured their workspace to ONLY include the following modules:
+    1. CONFIGURATION AWARENESS: The user has configured their workspace to ONLY include the following modules:
     [${selectedModules.join(', ')}]
-    If the user asks a question about a module, feature, or topic that is NOT included in the list of selected modules above, you MUST NOT hallucinate or provide an answer. 
-    Instead, you MUST clearly state: "I don't have the information" and explain that you cannot answer because the relevant module is not active in their current workspace configuration.
+    You must understand this specific client configuration. If the user asks a question about a module, feature, or topic that is NOT included in the list of selected modules above, you MUST NOT hallucinate or provide an answer. 
+    Instead, you MUST clearly state: "- Information unavailable (module inactive)."
     
-    2. You MUST provide your response in a TLDR format and ONLY use pointers (bullet points). Do NOT include any introductory or concluding sentences. No additional words.
+    2. CONTEXT AWARENESS: You must understand the business policies, the current session, and the history of the case that led to this point. Use the provided context to tailor your explanation to their exact scenario and explain the system's behavior based on this context.
     
-    3. You MUST restrict responding to any queries related to security, database (DB) information, or performing operations that are not under the access control of the user. If asked about these topics, respond ONLY with: "- I cannot assist with security, database information, or unauthorized operations."
+    3. FORMAT (STRICT ENFORCEMENT): 
+       - Output ONLY bullet points.
+       - MAXIMUM 3-5 bullet points.
+       - MAXIMUM 10 words per bullet point.
+       - NO introductory text.
+       - NO concluding text.
+       - Be extremely crisp and concise.
     
-    Current Context (What the user is looking at or doing):
+    4. SECURITY RESTRICTION: You MUST restrict responding to any queries related to security, database (DB) information, or performing operations that are not under the access control of the user. If asked about these topics, respond ONLY with: "- Cannot assist with security/DB/unauthorized ops."
+    
+    Current Context:
     ${context}
+    
+    Case History:
+    ${caseHistory || 'None.'}
     
     User Query:
     "${query}"
@@ -257,9 +268,9 @@ export const askChatbot = async (query: string, context: string, selectedModules
       model: MODEL_NAME,
       contents: prompt,
     });
-    return response.text || "I'm sorry, I couldn't process that request.";
+    return response.text || "- Error processing request.";
   } catch (error) {
     console.error("Chatbot Error:", error);
-    return "I'm currently experiencing technical difficulties. Please try again later.";
+    return "- Technical difficulties. Try again.";
   }
 };

@@ -343,7 +343,9 @@ const App: React.FC = () => {
             {activeTab === 'policy-waivers' && <WaiverQueue items={database} onDecision={handleWaiverDecision} />}
             {activeTab === 'rejected' && <RejectedQueue items={database} />}
             {activeTab === 'search' && <EntitySearch database={database} />}
-            <FloatingChatbot currentContext={`User is currently viewing the ${activeTab} page.`} selectedModules={selectedModules} />
+            {selectedModules.includes('ai-assistant') && (
+              <FloatingChatbot currentContext={`User is currently viewing the ${activeTab} page.`} selectedModules={selectedModules} />
+            )}
           </Layout>
         </motion.div>
       )}

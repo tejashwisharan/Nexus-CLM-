@@ -11,7 +11,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, selectedModules }) => {
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'onboarding', label: 'Screening', icon: UserPlus },
+    { id: 'onboarding', label: 'KYC and Screening', icon: UserPlus },
     { id: 'active-clients', label: 'Active Clients', icon: CheckCircle },
     { id: 'peer-review', label: 'Peer Review', icon: UserCheck },
     { id: 'pkyc', label: 'PKYC / Monitoring', icon: RefreshCw },

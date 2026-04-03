@@ -13,7 +13,9 @@ import {
   ArrowRight,
   FileSearch,
   Network,
-  FileText
+  FileText,
+  UserMinus,
+  Bot
 } from 'lucide-react';
 
 export interface ModuleConfig {
@@ -29,14 +31,16 @@ export interface ModuleConfig {
 
 export const AVAILABLE_MODULES: ModuleConfig[] = [
   { id: 'dashboard', name: 'Dashboard', description: 'Operational overview and analytics', icon: LayoutDashboard, required: true },
-  { id: 'onboarding', name: 'Screening', description: 'Client onboarding, KYC, and initial screening', icon: UserPlus, integrationOptions: ['Lexis Nexus', 'DowJones', 'Worldcheck', 'Inhouse'], multiSelectOptions: true },
+  { id: 'onboarding', name: 'KYC and Screening', description: 'Client onboarding, KYC, and initial screening', icon: UserPlus, integrationOptions: ['Lexis Nexus', 'DowJones', 'Worldcheck', 'Inhouse'], multiSelectOptions: true },
   { id: 'queue', name: 'Customer Due Diligence', description: 'Standard investigations for medium-risk entities', icon: ListChecks, integrationOptions: ['Inhouse', 'Third Party'] },
   { id: 'edd', name: 'Enhanced Due Diligence (EDD)', description: 'Deep dive investigations for high-risk entities', icon: FileSearch },
   { id: 'peer-review', name: 'Peer Review', description: 'Four-eyes principle for analyst decisions', icon: UserCheck },
-  { id: 'compliance-checks', name: 'Compliance Checks', description: 'Automated and manual compliance rule verification', icon: ShieldCheck },
+  { id: 'compliance-checks', name: 'Compliance Checks', description: 'Automated and manual compliance rule verification', icon: ShieldCheck, integrationOptions: ['Inhouse', 'Third Party'] },
   { id: 'policy-waivers', name: 'Policy Waivers', description: 'Manage policy exceptions and compliance approvals', icon: Flag },
   { id: 'pkyc', name: 'Perpetual KYC (PKYC)', description: 'Continuous monitoring and periodic reviews', icon: RefreshCw },
   { id: 'search', name: 'Entity Search', description: 'Global search across all client records', icon: Search },
+  { id: 'offboarding', name: 'Offboarding', description: 'Manage client exits and account closures', icon: UserMinus },
+  { id: 'ai-assistant', name: 'AI Assistant', description: 'AI chatbot for operational support and queries', icon: Bot },
 ];
 
 interface ConfigurationPageProps {

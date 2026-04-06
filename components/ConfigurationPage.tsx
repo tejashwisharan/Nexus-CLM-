@@ -15,7 +15,8 @@ import {
   Network,
   FileText,
   UserMinus,
-  Bot
+  Bot,
+  Settings
 } from 'lucide-react';
 
 export interface ModuleConfig {
@@ -41,6 +42,7 @@ export const AVAILABLE_MODULES: ModuleConfig[] = [
   { id: 'search', name: 'Entity Search', description: 'Global search across all client records', icon: Search },
   { id: 'offboarding', name: 'Offboarding', description: 'Manage client exits and account closures', icon: UserMinus },
   { id: 'ai-assistant', name: 'My Precious', description: 'AI chatbot for operational support and queries', icon: Bot },
+  { id: 'config-editor', name: 'Configuration Editor', description: 'Manage fields, documents, and deploy to production', icon: Settings },
 ];
 
 interface ConfigurationPageProps {

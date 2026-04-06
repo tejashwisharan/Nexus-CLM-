@@ -20,6 +20,8 @@ import RiskBadge from './components/RiskBadge';
 import { Users, AlertTriangle, CheckCircle, PieChart, Flag, Bot, RefreshCw, UserMinus, Ban, ShieldCheck, ListChecks } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
+import ConfigurationEditor from './views/ConfigurationEditor';
+
 const App: React.FC = () => {
   const [isConfigured, setIsConfigured] = useState(false);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
@@ -343,6 +345,7 @@ const App: React.FC = () => {
             {activeTab === 'policy-waivers' && <WaiverQueue items={database} onDecision={handleWaiverDecision} />}
             {activeTab === 'rejected' && <RejectedQueue items={database} />}
             {activeTab === 'search' && <EntitySearch database={database} />}
+            {activeTab === 'config-editor' && <ConfigurationEditor />}
             {selectedModules.includes('ai-assistant') && (
               <FloatingChatbot currentContext={`User is currently viewing the ${activeTab} page.`} selectedModules={selectedModules} />
             )}

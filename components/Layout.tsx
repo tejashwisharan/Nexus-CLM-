@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus, CheckCircle, Ban, FileSearch, Network, FileText } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Search, ListChecks, Bell, ShieldCheck, UserCheck, Flag, Bot, RefreshCw, UserMinus, CheckCircle, Ban, FileSearch, Network, FileText, Settings } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,6 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, selec
     { id: 'policy-waivers', label: 'Policy Waivers', icon: Flag },
     { id: 'rejected', label: 'Rejected', icon: Ban },
     { id: 'search', label: 'Entity Search', icon: Search },
+    { id: 'config-editor', label: 'Config Editor', icon: Settings },
   ];
 
   const navItems = allNavItems.filter(item => selectedModules.includes(item.id));

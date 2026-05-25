@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { EntityType, DocumentRequirement, RiskLevel, EntityProfile, ApplicationStatus, Region, TaxInfo, ScreeningHit, MatchStatus } from '../types';
 import { REQUIRED_DOCS_MAP, INDUSTRY_DOCS, COUNTRIES, NACE_CODES, FINANCIAL_PRODUCTS, DEMO_SCENARIOS, KEYWORD_DOCS, RISK_JURISDICTIONS, PRODUCT_DOCS, JURISDICTION_DOCS, TAX_REQUIREMENTS } from '../constants';
-import { performRiskAnalysis, verifyDocumentIntegrity } from '../services/geminiService';
+import { performRiskAnalysis, verifyDocumentIntegrity, extractDocumentData, ExtractedDocData } from '../services/geminiService';
 import RiskBadge from '../components/RiskBadge';
 import { ArrowRight, Upload, AlertCircle, Loader2, FileCheck, Search, ChevronRight, Check, Briefcase, MapPin, Mail, Globe, Zap, Bot, Sparkles, Shield, Anchor, AlertTriangle, Scale, UserCheck, Users, ScanEye, Microscope, FileWarning, Landmark, XCircle, HelpCircle } from 'lucide-react';
 
@@ -27,6 +27,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // Analysis State
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [screeningHits, setScreeningHits] = useState<ScreeningHit[]>([]);
+
+  // AI OCR States
+  const [ocrFileName, setOcrFileName] = useState<string | null>(null);
+  const [ocrData, setOcrData] = useState<ExtractedDocData | null>(null);
+  const [ocrIsExtracting, setOcrIsExtracting] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrFileBase64, setOcrFileBase64] = useState<string | null>(null);
+  const [ocrFileMimeType, setOcrFileMimeType] = useState<string | null>(null);
 
   // --- Policy Engine & Rules ---
 
@@ -113,6 +121,106 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setTaxInfo(scenario.taxInfo || {});
     runPolicyEngine(scenario.type, scenario.data);
     setStep(2);
+  };
+
+  const handleOcrFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setOcrFileName(file.name);
+    setOcrIsExtracting(true);
+    setOcrError(null);
+    setOcrData(null);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const fullDataUrl = event.target?.result as string;
+        const base64Data = fullDataUrl.split(',')[1];
+        setOcrFileBase64(base64Data);
+        setOcrFileMimeType(file.type);
+
+        const result = await extractDocumentData(file.name, base64Data, file.type);
+        setOcrData(result);
+      } catch (err: any) {
+        console.error("OCR extraction failed", err);
+        setOcrError("Failed to extract data. Using backup fallback extraction model.");
+        const result = await extractDocumentData(file.name);
+        setOcrData(result);
+      } finally {
+        setOcrIsExtracting(false);
+      }
+    };
+    reader.onerror = () => {
+      setOcrError("Failed to read file.");
+      setOcrIsExtracting(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const applyOcrData = () => {
+    if (!ocrData) return;
+    const { extractedFields } = ocrData;
+    
+    const updatedForm = { ...formData };
+    
+    if (extractedFields.name) updatedForm.name = extractedFields.name;
+    if (extractedFields.dob) updatedForm.dob = extractedFields.dob;
+    if (extractedFields.doi) updatedForm.doi = extractedFields.doi;
+    if (extractedFields.registrationNumber) updatedForm.regNumber = extractedFields.registrationNumber;
+    
+    const extractedCountry = extractedFields.country || extractedFields.nationality;
+    if (extractedCountry) {
+        if (entityType === EntityType.INDIVIDUAL) {
+            updatedForm.nationality = extractedCountry;
+        } else {
+            updatedForm.country = extractedCountry;
+        }
+    }
+    
+    if (extractedFields.chairman) updatedForm.chairman = extractedFields.chairman;
+    if (extractedFields.ubos) updatedForm.ubos = extractedFields.ubos;
+    if (extractedFields.email) updatedForm.email = extractedFields.email;
+    if (extractedFields.product) updatedForm.product = extractedFields.product;
+    if (extractedFields.businessActivity) updatedForm.businessActivity = extractedFields.businessActivity;
+    
+    if (extractedFields.industry) {
+        const bestNace = NACE_CODES.find(code => 
+            code.toLowerCase().includes(extractedFields.industry!.toLowerCase()) ||
+            extractedFields.industry!.toLowerCase().includes(code.toLowerCase())
+        );
+        if (bestNace) {
+            if (entityType === EntityType.INDIVIDUAL) {
+                updatedForm.occupation = bestNace;
+            } else {
+                updatedForm.industry = bestNace;
+            }
+        }
+    }
+
+    setFormData(updatedForm);
+    
+    if (extractedCountry) {
+        const lowerCountry = extractedCountry.toLowerCase();
+        let regionToSet: Region = Region.US_CANADA;
+        if (lowerCountry.includes("kingdom") || lowerCountry.includes("london") || lowerCountry.includes("uk") || lowerCountry.includes("germany") || lowerCountry.includes("france") || lowerCountry.includes("europe") || lowerCountry.includes("panama") || lowerCountry.includes("cayman")) {
+            regionToSet = Region.EU_UK;
+        } else if (lowerCountry.includes("singapore") || lowerCountry.includes("asia") || lowerCountry.includes("japan") || lowerCountry.includes("hk") || lowerCountry.includes("hong kong")) {
+            regionToSet = Region.APAC;
+        }
+        setSelectedRegion(regionToSet);
+        
+        const taxKey = TAX_REQUIREMENTS[regionToSet]?.[0]?.key;
+        if (taxKey) {
+            setTaxInfo({
+                [taxKey]: extractedFields.registrationNumber || "TX-90210-TEMP"
+            });
+        }
+    }
+
+    if (entityType) {
+        runPolicyEngine(entityType, updatedForm);
+    }
   };
 
   // --- Step 1: Entity Selection ---
@@ -202,6 +310,156 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 <h3 className="text-xl font-bold text-slate-800">KYC Profile: {entityType}</h3>
                 <p className="text-sm text-slate-500">Complete all fields to facilitate risk assessment.</p>
             </div>
+            </div>
+
+            {/* AI Auto-Fill / OCR Box */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 mb-8">
+              <div className="flex items-start justify-between">
+                <div className="flex space-x-3">
+                  <div className="bg-blue-600 text-white p-2 rounded-lg mt-0.5 shadow-sm">
+                    <Sparkles className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-800">AI Document Extraction & Classification</h4>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Upload an Identity document (Passport, ID) or Company Registry (COI) to instantly extract details and pre-fill this form using AI Vision.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                {/* Upload Zone */}
+                <div>
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-blue-200 hover:border-blue-400 bg-white rounded-lg p-6 cursor-pointer hover:bg-slate-50 transition-all text-center">
+                    <Upload className="w-8 h-8 text-blue-500 mb-2" />
+                    <span className="text-sm font-semibold text-slate-700">Select Document File</span>
+                    <span className="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG, TIFF</span>
+                    <input 
+                      type="file" 
+                      accept="image/*,.pdf" 
+                      onChange={handleOcrFileChange} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+
+                {/* Extraction State Display */}
+                <div className="bg-white rounded-lg p-4 border border-blue-50/50 min-h-[120px] flex flex-col justify-center">
+                  {ocrIsExtracting && (
+                    <div className="text-center space-y-3">
+                      <div className="relative inline-block">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto animate-duration-1000" />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-blue-600">AI</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-700">Analysing Document Integrity...</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Extracting structured fields with Gemini Multimodality...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!ocrIsExtracting && !ocrData && !ocrError && (
+                    <div className="text-center text-slate-400 text-sm">
+                      <Bot className="w-8 h-8 mx-auto mb-1.5 text-slate-300" />
+                      No document uploaded. Use AI Vision to skip manual data entry.
+                    </div>
+                  )}
+
+                  {ocrError && (
+                    <div className="text-center text-red-600 text-sm p-2 flex flex-col items-center">
+                      <FileWarning className="w-8 h-8 text-red-500 mb-1" />
+                      <span>{ocrError}</span>
+                    </div>
+                  )}
+
+                  {ocrData && !ocrIsExtracting && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span className="text-sm font-bold text-slate-800">{ocrData.documentType}</span>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-800">
+                          {ocrData.confidence}% Confidence
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 line-clamp-2">{ocrData.explanation}</p>
+                      
+                      <button
+                        onClick={applyOcrData}
+                        className="w-full mt-1.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium text-xs flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Pre-populate & Auto-fill Form</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Extraction Results Visualizer Drawer */}
+              {ocrData && !ocrIsExtracting && (
+                <div className="mt-5 border-t border-slate-200/60 pt-4 bg-slate-50 -mx-6 -mb-6 p-6 rounded-b-xl border-t border-blue-100">
+                  <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Extracted Metadata & OCR Confidence</h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                    {ocrData.extractedFields.name && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Name / Owner</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.name}</span>
+                      </div>
+                    )}
+                    {(ocrData.extractedFields.doi || ocrData.extractedFields.dob) && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">{ocrData.extractedFields.doi ? 'Incorporation Date' : 'Birth Date'}</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.doi || ocrData.extractedFields.dob}</span>
+                      </div>
+                    )}
+                    {ocrData.extractedFields.registrationNumber && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Identifier / Reg No.</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.registrationNumber}</span>
+                      </div>
+                    )}
+                    {(ocrData.extractedFields.country || ocrData.extractedFields.nationality) && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Jurisdiction / Country</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.country || ocrData.extractedFields.nationality}</span>
+                      </div>
+                    )}
+                   {ocrData.extractedFields.chairman && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Chairman</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.chairman}</span>
+                      </div>
+                    )}
+                    {ocrData.extractedFields.ubos && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm col-span-2">
+                        <span className="text-slate-400 block mb-0.5">UBO List (% stake)</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.ubos}</span>
+                      </div>
+                    )}
+                    {ocrData.extractedFields.industry && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Industry Sector</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.industry}</span>
+                      </div>
+                    )}
+                    {ocrData.extractedFields.email && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Contact Email</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.email}</span>
+                      </div>
+                    )}
+                    {ocrData.extractedFields.product && (
+                      <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                        <span className="text-slate-400 block mb-0.5">Required Service</span>
+                        <span className="font-semibold text-slate-800 truncate block">{ocrData.extractedFields.product}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="space-y-8">
